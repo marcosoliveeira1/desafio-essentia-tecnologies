@@ -1,0 +1,25 @@
+import 'reflect-metadata'
+import { DataSource } from 'typeorm'
+import { env, type DbConfig } from '../env.js'
+
+// F8: `migrationsRun: true` — schema versionado roda no boot, zero passo manual.
+// Entidades/migrations entram nas próximas tasks (T4...).
+export function createMysqlDataSource(config?: DbConfig): DataSource {
+  const db: DbConfig = config ?? env.db
+  return new DataSource({
+    type: 'mysql',
+    host: db.host,
+    port: db.port,
+    username: db.username,
+    password: db.password,
+    database: db.database,
+    entities: [],
+    migrations: [],
+    migrationsRun: true,
+    synchronize: false,
+    logging: false,
+  })
+}
+
+// DataSource padrão (dev/prod). Testes criam o próprio via createMysqlDataSource(env.dbTest).
+export const mysqlDataSource = createMysqlDataSource()
