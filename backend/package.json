@@ -1,0 +1,15 @@
+{
+  "name": "backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Task Manager TechX — API (Fastify + TypeScript + MySQL)",
+  "type": "module",
+  "scripts": {
+    "dev": "echo 'TODO T3: tsx watch src/main.ts'",
+    "build": "echo 'TODO T3: tsc -p tsconfig.json'",
+    "test": "echo 'TODO T3: vitest run'"
+  },
+  "engines": {
+    "node": "22.22.1"
+  }
+}

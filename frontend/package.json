@@ -1,0 +1,14 @@
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Task Manager TechX — UI (Angular standalone)",
+  "scripts": {
+    "start": "echo 'TODO T9: ng serve'",
+    "build": "echo 'TODO T9: ng build'",
+    "test": "echo 'TODO T9: ng test'"
+  },
+  "engines": {
+    "node": "22.22.1"
+  }
+}

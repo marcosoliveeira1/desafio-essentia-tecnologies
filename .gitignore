@@ -1,0 +1,38 @@
+# specs locais — não vão para entrega
+.specs/
+
+# dependencies
+node_modules/
+
+# builds
+dist/
+build/
+out/
+
+# env
+.env
+.env.local
+.env.*.local
+
+# Angular
+.angular/cache/
+.angular/
+
+# logs
+logs/
+*.log
+npm-debug.log*
+
+# coverage
+coverage/
+.nyc_output/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# TypeScript
+*.tsbuildinfo
