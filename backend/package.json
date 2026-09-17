@@ -12,6 +12,7 @@
     "build": "tsc",
     "test": "vitest run test/unit --passWithNoTests",
     "test:e2e": "vitest run test/e2e --passWithNoTests",
+    "seed": "tsx src/seed.ts",
     "lint": "biome check src test"
   },
   "dependencies": {
