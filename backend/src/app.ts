@@ -15,7 +15,9 @@ export interface BuildAppOptions {
 // Factory testável sem rede: não abre porta nem inicializa o banco.
 // Quem chama decide o DataSource (dev/prod → todo_dev, e2e → todo_test).
 export async function buildApp({ db, taskService }: BuildAppOptions): Promise<FastifyInstance> {
-  const app = Fastify({ logger: true })
+  // Ajv estrito: o default do Fastify coage tipos (123 → "123"), o que deixaria
+  // "tipos errados" passarem com 201. Aqui, tipo errado é 400 (API-06).
+  const app = Fastify({ logger: true, ajv: { customOptions: { coerceTypes: false } } })
   // CORS aberto p/ dev (front em porta distinta via proxy ou direto).
   await app.register(cors)
   registerErrorHandler(app)
