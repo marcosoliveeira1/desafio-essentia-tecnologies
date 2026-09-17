@@ -1,0 +1,106 @@
+import { NotFoundError } from '../../shared/errors/not-found.error.js'
+import { ValidationError } from '../../shared/errors/validation.error.js'
+import type { TaskEntity } from './task.entity.js'
+import type { CreateTaskInput, ITaskRepository, UpdateTaskInput } from './task.repository.js'
+
+// Regras de negócio de tarefas — não conhece HTTP nem SQL.
+// Toda validação de domínio lança AppError (400/404); o error-handler monta o HTTP.
+export class TaskService {
+  constructor(private readonly repo: ITaskRepository) {}
+
+  // Ordem decrescente de criação (o repositório garante).
+  list(): Promise<TaskEntity[]> {
+    return this.repo.findAll()
+  }
+
+  async getById(id: number): Promise<TaskEntity> {
+    this.assertValidId(id)
+    const task = await this.repo.findById(id)
+    if (task === null) {
+      throw new NotFoundError('Tarefa não encontrada', 'TASK_NOT_FOUND')
+    }
+    return task
+  }
+
+  async create(input: CreateTaskInput): Promise<TaskEntity> {
+    const title = this.normalizeTitle(input?.title)
+    const description = this.normalizeDescription(input?.description)
+    // `completed` sempre nasce false, mesmo que o cliente envie true.
+    return this.repo.create({ title, description, completed: false })
+  }
+
+  async update(id: number, patch: UpdateTaskInput): Promise<TaskEntity> {
+    this.assertValidId(id)
+    if (patch === null || typeof patch !== 'object' || Object.keys(patch).length === 0) {
+      throw new ValidationError('Corpo da requisição vazio', [{ field: 'body', message: 'envie ao menos um campo' }])
+    }
+    const data: UpdateTaskInput = {}
+    if (patch.title !== undefined) {
+      data.title = this.normalizeTitle(patch.title)
+    }
+    if (patch.description !== undefined) {
+      data.description = this.normalizeDescription(patch.description)
+    }
+    if (patch.completed !== undefined) {
+      if (typeof patch.completed !== 'boolean') {
+        throw new ValidationError('Dados inválidos', [{ field: 'completed', message: 'deve ser booleano' }])
+      }
+      data.completed = patch.completed
+    }
+    const existing = await this.repo.findById(id)
+    if (existing === null) {
+      throw new NotFoundError('Tarefa não encontrada', 'TASK_NOT_FOUND')
+    }
+    const updated = await this.repo.update(id, data)
+    if (updated === null) {
+      throw new NotFoundError('Tarefa não encontrada', 'TASK_NOT_FOUND')
+    }
+    return updated
+  }
+
+  async remove(id: number): Promise<void> {
+    this.assertValidId(id)
+    const deleted = await this.repo.delete(id)
+    if (!deleted) {
+      throw new NotFoundError('Tarefa não encontrada', 'TASK_NOT_FOUND')
+    }
+  }
+
+  private assertValidId(id: number): void {
+    if (!Number.isInteger(id) || id < 1) {
+      throw new ValidationError('Dados inválidos', [{ field: 'id', message: 'deve ser um inteiro positivo' }])
+    }
+  }
+
+  // F3: trim + rejeita vazio pós-trim (whitespace-only) + limite 255.
+  private normalizeTitle(value: unknown): string {
+    if (typeof value !== 'string') {
+      throw new ValidationError('Dados inválidos', [{ field: 'title', message: 'título é obrigatório' }])
+    }
+    const title = value.trim()
+    if (title.length === 0) {
+      throw new ValidationError('Dados inválidos', [{ field: 'title', message: 'título não pode ser vazio' }])
+    }
+    if (title.length > 255) {
+      throw new ValidationError('Dados inválidos', [
+        { field: 'title', message: 'título deve ter no máximo 255 caracteres' },
+      ])
+    }
+    return title
+  }
+
+  private normalizeDescription(value: unknown): string | null | undefined {
+    if (value === undefined || value === null) {
+      return value ?? undefined
+    }
+    if (typeof value !== 'string') {
+      throw new ValidationError('Dados inválidos', [{ field: 'description', message: 'deve ser texto' }])
+    }
+    if (value.length > 2000) {
+      throw new ValidationError('Dados inválidos', [
+        { field: 'description', message: 'descrição deve ter no máximo 2000 caracteres' },
+      ])
+    }
+    return value
+  }
+}
