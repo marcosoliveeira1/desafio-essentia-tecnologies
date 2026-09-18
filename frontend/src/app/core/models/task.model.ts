@@ -3,6 +3,7 @@ export interface Task {
 	title: string
 	description: string | null
 	completed: boolean
+	position: number
 	createdAt: string
 	updatedAt: string
 }
@@ -16,4 +17,5 @@ export interface UpdateTaskDto {
 	title?: string
 	description?: string | null
 	completed?: boolean
+	position?: number
 }

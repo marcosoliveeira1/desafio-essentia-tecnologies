@@ -11,6 +11,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
 		createdAt: '2026-01-01T00:00:00.000Z',
 		description: null,
 		id: 1,
+		position: 1,
 		title: 'Estudar Angular',
 		updatedAt: '2026-01-01T00:00:00.000Z',
 		...overrides,
@@ -103,16 +104,45 @@ describe('TaskStoreService', () => {
 		expect(store.tasks()).toEqual([updated])
 	})
 
-	it('move na mesma coluna reordena local sem chamada HTTP', () => {
-		const first = makeTask({ id: 1 })
-		const second = makeTask({ id: 2 })
-		store.tasks.set([first, second])
-		spyObj.update.mockReturnValue(of(first))
+	it('move na mesma coluna persiste via PATCH com { position: max+1 global }', () => {
+		store.tasks.set([
+			makeTask({ id: 1, position: 1 }),
+			makeTask({ id: 2, position: 5 }),
+			makeTask({ completed: true, id: 3, position: 3 }),
+		])
+		const updated = makeTask({ id: 1, position: 6 })
+		spyObj.update.mockReturnValue(of(updated))
 
 		store.move(1, false)
 
-		expect(spyObj.update).not.toHaveBeenCalled()
-		expect(store.tasks().map((task) => task.id)).toEqual([2, 1])
+		expect(spyObj.update).toHaveBeenCalledTimes(1)
+		expect(spyObj.update).toHaveBeenCalledWith(1, { position: 6 })
+		expect(store.tasks()).toEqual([
+			updated,
+			makeTask({ id: 2, position: 5 }),
+			makeTask({ completed: true, id: 3, position: 3 }),
+		])
+		expect(store.loading()).toBe(false)
+		expect(store.error()).toBeNull()
+	})
+
+	it('erro no reorder intra-coluna seta mensagem PT-BR e preserva tasks', () => {
+		const before = [
+			makeTask({ id: 1, position: 1 }),
+			makeTask({ id: 2, position: 5 }),
+		]
+		store.tasks.set(before)
+		spyObj.update.mockReturnValue(throwError(() => new Error('fail')))
+
+		store.move(1, false)
+
+		expect(spyObj.update).toHaveBeenCalledTimes(1)
+		expect(spyObj.update).toHaveBeenCalledWith(1, { position: 6 })
+		expect(store.error()).toBe(
+			'Não foi possível atualizar a tarefa. Tente novamente.',
+		)
+		expect(store.tasks()).toEqual(before)
+		expect(store.loading()).toBe(false)
 	})
 
 	it('filter pendentes/concluídas sem nova chamada HTTP', () => {

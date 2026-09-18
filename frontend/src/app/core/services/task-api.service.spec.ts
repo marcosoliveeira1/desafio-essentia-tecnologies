@@ -16,6 +16,7 @@ describe('TaskApiService', () => {
 		createdAt: '2026-01-01T00:00:00.000Z',
 		description: null,
 		id: 1,
+		position: 1,
 		title: 'Estudar Angular',
 		updatedAt: '2026-01-01T00:00:00.000Z',
 	}
@@ -66,6 +67,19 @@ describe('TaskApiService', () => {
 		expect(req.request.method).toBe('PATCH')
 		expect(req.request.body).toEqual(patch)
 		req.flush({ ...task, completed: true })
+	})
+
+	it('update(id, { position }) faz PATCH em /api/tasks/:id com position no body', () => {
+		const patch: UpdateTaskDto = { position: 6 }
+
+		service.update(1, patch).subscribe((updated) => {
+			expect(updated).toEqual({ ...task, position: 6 })
+		})
+
+		const req = httpMock.expectOne('/api/tasks/1')
+		expect(req.request.method).toBe('PATCH')
+		expect(req.request.body).toEqual(patch)
+		req.flush({ ...task, position: 6 })
 	})
 
 	it('remove(id) faz DELETE em /api/tasks/:id', () => {

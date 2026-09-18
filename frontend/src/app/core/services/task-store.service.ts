@@ -155,10 +155,13 @@ export class TaskStoreService {
 	 *
 	 * - Coluna diferente (`completed` diverge): persiste via
 	 *   `PATCH /api/tasks/:id` com `{ completed }` e substitui o item local
-	 *   pelo retorno da API. Nunca envia `position` (o backend responde 400).
-	 * - Mesma coluna: apenas reorder local (remove e reinsere o item no fim
-	 *   da sua coluna), sem chamada HTTP — **não persiste após reload**,
-	 *   pois o backend não expõe `position`.
+	 *   pelo retorno da API.
+	 * - Mesma coluna (drop intra-coluna): append global — calcula
+	 *   `newPosition = max(position de todas tasks()) + 1` (global,
+	 *   independente de filtro/busca/sort) e persiste sempre via
+	 *   `PATCH /api/tasks/:id` com `{ position: newPosition }`, substituindo
+	 *   o item local pelo retorno da API. Reorder fino por índice está fora
+	 *   de escopo.
 	 */
 	move(id: number, toCompleted: boolean): void {
 		const current = this.tasks().find((task) => task.id === id)
@@ -180,10 +183,24 @@ export class TaskStoreService {
 			})
 			return
 		}
-		this.tasks.update((all) => {
-			const item = all.find((task) => task.id === id)
-			if (!item) return all
-			return [...all.filter((task) => task.id !== id), item]
+		const maxPosition = this.tasks().reduce(
+			(max, task) => Math.max(max, task.position ?? 0),
+			0,
+		)
+		const newPosition = maxPosition + 1
+		this.loading.set(true)
+		this.error.set(null)
+		this.api.update(id, { position: newPosition }).subscribe({
+			error: () => {
+				this.error.set(MSG_UPDATE)
+				this.loading.set(false)
+			},
+			next: (updated) => {
+				this.tasks.update((all) =>
+					all.map((task) => (task.id === id ? updated : task)),
+				)
+				this.loading.set(false)
+			},
 		})
 	}
 

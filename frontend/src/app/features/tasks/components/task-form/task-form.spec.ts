@@ -7,6 +7,7 @@ import { TaskForm } from './task-form'
 describe('TaskForm', () => {
 	const storeFake = {
 		add: vi.fn(),
+		update: vi.fn(),
 	}
 
 	beforeEach(() => {
@@ -94,6 +95,46 @@ describe('TaskForm', () => {
 			description: 'Revisar sinais',
 			title: 'Estudar Angular',
 		})
+		expect(saved).toHaveBeenCalledTimes(1)
+	})
+
+	it('modo edição chama store.update com { title, description } exato (sem position)', async () => {
+		const fixture = await createForm()
+		const component = fixture.componentInstance
+		const saved = vi.fn()
+		component.saved.subscribe(saved)
+
+		fixture.componentRef.setInput('task', {
+			completed: false,
+			createdAt: '2026-01-01T00:00:00.000Z',
+			description: null,
+			id: 1,
+			position: 1,
+			title: 'Antigo',
+			updatedAt: '2026-01-01T00:00:00.000Z',
+		})
+		fixture.detectChanges()
+		await fixture.whenStable()
+		fixture.detectChanges()
+
+		component.form.controls.title.setValue('Novo')
+		component.form.controls.description.setValue('Desc')
+
+		fixture.nativeElement
+			.querySelector('form')
+			.dispatchEvent(new Event('submit'))
+		fixture.detectChanges()
+
+		expect(storeFake.update).toHaveBeenCalledTimes(1)
+		expect(storeFake.update).toHaveBeenCalledWith(1, {
+			description: 'Desc',
+			title: 'Novo',
+		})
+		expect(storeFake.update.mock.calls[0][1]).toEqual({
+			description: 'Desc',
+			title: 'Novo',
+		})
+		expect(storeFake.add).not.toHaveBeenCalled()
 		expect(saved).toHaveBeenCalledTimes(1)
 	})
 })
