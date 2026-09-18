@@ -1,5 +1,6 @@
 import 'reflect-metadata'
 import { buildApp } from './app.js'
+import { createActivityRepository } from './container.js'
 import { createMongoDataSource } from './database/mongo.data-source.js'
 import { createMysqlDataSource } from './database/mysql.data-source.js'
 import { loadEnv } from './env.js'
@@ -19,7 +20,12 @@ async function main(): Promise<void> {
     console.warn('[main] mongo indisponível — histórico de atividades degradado:', err)
   }
 
-  const app = await buildApp({ db })
+  // T22: activity SÓ se o mongo inicializou — senão undefined e o CRUD
+  // MySQL segue sem histórico (degradação HIST-04, warn no service).
+  const app = await buildApp({
+    db,
+    activityRepository: mongo.isInitialized ? createActivityRepository(mongo) : undefined,
+  })
 
   // M7: shutdown gracioso — SIGTERM fecha HTTP e depois os bancos, sem pendurar conexões.
   const shutdown = async (signal: string): Promise<void> => {

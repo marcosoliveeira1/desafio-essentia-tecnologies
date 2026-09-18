@@ -4,6 +4,7 @@ import Fastify, { type FastifyInstance } from 'fastify'
 import type { DataSource } from 'typeorm'
 import { registerModules, type ModuleOverrides } from './container.js'
 import { env } from './env.js'
+import type { IActivityRepository } from './modules/activity/activity.repository.js'
 import { registerErrorHandler } from './shared/http/error-handler.js'
 import { registerHealthRoutes } from './shared/http/health.routes.js'
 
@@ -15,11 +16,20 @@ export interface BuildAppOptions {
   // Override do secret p/ testes (e2e usa secret determinístico sem
   // depender de JWT_SECRET no shell).
   jwtSecret?: string
+  // T22: repositório de atividades (MongoDB) — opcional; ausente (mongo fora
+  // no boot ou teste sem mongo) o CRUD segue sem registrar histórico (HIST-04).
+  activityRepository?: IActivityRepository
 }
 
 // Factory testável sem rede: não abre porta nem inicializa o banco.
 // Quem chama decide o DataSource (dev/prod → todo_dev, e2e → todo_test).
-export async function buildApp({ db, taskService, authService, jwtSecret }: BuildAppOptions): Promise<FastifyInstance> {
+export async function buildApp({
+  db,
+  taskService,
+  authService,
+  jwtSecret,
+  activityRepository,
+}: BuildAppOptions): Promise<FastifyInstance> {
   // Ajv estrito: o default do Fastify coage tipos (123 → "123"), o que deixaria
   // "tipos errados" passarem com 201. Aqui, tipo errado é 400 (API-06).
   // removeAdditional: false — o default do Fastify (true) remove props extras
@@ -37,6 +47,6 @@ export async function buildApp({ db, taskService, authService, jwtSecret }: Buil
   registerHealthRoutes(app, db)
   const overrides: ModuleOverrides | undefined =
     taskService !== undefined || authService !== undefined ? { taskService, authService } : undefined
-  registerModules(app, db, overrides)
+  registerModules(app, db, overrides, activityRepository)
   return app
 }

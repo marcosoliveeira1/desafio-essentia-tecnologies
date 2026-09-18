@@ -57,13 +57,19 @@ function dbConfig(prefix: '' | 'TEST_'): DbConfig {
 
 // T21: config Mongo (extra Fase 6 — histórico de atividades). SEM fail-fast duro:
 // ausente cai no fallback local e o boot segue (mongo fora só degrada o histórico,
-// ver main.ts). NÃO renomear sem atualizar o .env.example junto.
+// ver main.ts). T22: `testUrl` isola o e2e de histórico (MONGO_TEST_URL ?? MONGO_URL).
+// NÃO renomear sem atualizar o .env.example junto.
 export interface MongoConfig {
   url: string
+  testUrl?: string
 }
 
 function mongoConfig(): MongoConfig {
-  return { url: process.env.MONGO_URL ?? 'mongodb://localhost:27017/todo_activity' }
+  const testUrl = process.env.MONGO_TEST_URL
+  return {
+    url: process.env.MONGO_URL ?? 'mongodb://localhost:27017/todo_activity',
+    ...(testUrl !== undefined && testUrl !== '' ? { testUrl } : {}),
+  }
 }
 
 function authConfig(nodeEnv: string): AuthConfig {

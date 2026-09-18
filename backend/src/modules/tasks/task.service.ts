@@ -1,5 +1,7 @@
 import { NotFoundError } from '../../shared/errors/not-found.error.js'
 import { ValidationError } from '../../shared/errors/validation.error.js'
+import type { ActivityAction } from '../activity/activity-log.entity.js'
+import type { IActivityRepository } from '../activity/activity.repository.js'
 import type { TaskEntity } from './task.entity.js'
 import type { CreateTaskInput, ITaskRepository, UpdateTaskInput } from './task.repository.js'
 
@@ -7,8 +9,13 @@ import type { CreateTaskInput, ITaskRepository, UpdateTaskInput } from './task.r
 // Toda validação de domínio lança AppError (400/404); o error-handler monta o HTTP.
 // T18 (breaking intencional): userId OBRIGATÓRIO como primeiro arg em toda chamada.
 // Cross-user → NotFoundError TASK_NOT_FOUND 404 (não vaza existência alheia).
+// T22: `activity` OPCIONAL (DIP) — registra eventos do histórico (HIST-01);
+// falha de gravação degrada com warn e o CRUD segue (HIST-04).
 export class TaskService {
-  constructor(private readonly repo: ITaskRepository) {}
+  constructor(
+    private readonly repo: ITaskRepository,
+    private readonly activity?: IActivityRepository,
+  ) {}
 
   // Ordem crescente de position (o repositório garante; desempate por id).
   list(userId: number): Promise<TaskEntity[]> {
@@ -30,7 +37,12 @@ export class TaskService {
     // `completed` sempre nasce false, mesmo que o cliente envie true.
     // `position` é sempre MAX+1 do DONO (input do cliente ignorado).
     const maxPosition = await this.repo.getMaxPosition(userId)
-    return this.repo.create({ title, description, completed: false, position: maxPosition + 1 }, userId)
+    const created = await this.repo.create(
+      { title, description, completed: false, position: maxPosition + 1 },
+      userId,
+    )
+    await this.record({ taskId: created.id, userId, action: 'created' })
+    return created
   }
 
   async update(userId: number, id: number, patch: UpdateTaskInput): Promise<TaskEntity> {
@@ -67,6 +79,14 @@ export class TaskService {
     if (updated === null) {
       throw new NotFoundError('Tarefa não encontrada', 'TASK_NOT_FOUND')
     }
+    // T22: classificação do evento — transição de completed tem precedência
+    // (completed/uncompleted); PATCH só-position NÃO gera evento; completed com
+    // o mesmo valor cai em 'updated'; demais casos → 'updated'.
+    if (data.completed !== undefined && data.completed !== existing.completed) {
+      await this.record({ taskId: id, userId, action: data.completed ? 'completed' : 'uncompleted' })
+    } else if (!(Object.keys(data).length === 1 && data.position !== undefined)) {
+      await this.record({ taskId: id, userId, action: 'updated' })
+    }
     return updated
   }
 
@@ -76,6 +96,8 @@ export class TaskService {
     if (!deleted) {
       throw new NotFoundError('Tarefa não encontrada', 'TASK_NOT_FOUND')
     }
+    // T22: delete registra APÓS o sucesso (404 não gera evento).
+    await this.record({ taskId: id, userId, action: 'deleted' })
   }
 
   // R1: reorder — position = índice 0-based; não-listadas mantêm position.
@@ -112,6 +134,20 @@ export class TaskService {
   private assertValidId(id: number): void {
     if (!Number.isInteger(id) || id < 1) {
       throw new ValidationError('Dados inválidos', [{ field: 'id', message: 'deve ser um inteiro positivo' }])
+    }
+  }
+
+  // T22: gravação best-effort no histórico — sem activity (mongo fora no boot)
+  // vira no-op; falha de gravação só avisa e o CRUD segue (HIST-04).
+  // `changes` omitido (o mongo persiste null).
+  private async record(input: { taskId: number; userId: number; action: ActivityAction }): Promise<void> {
+    if (this.activity === undefined) {
+      return
+    }
+    try {
+      await this.activity.record(input)
+    } catch (err) {
+      console.warn('[task-service] histórico de atividades degradado:', err)
     }
   }
 
