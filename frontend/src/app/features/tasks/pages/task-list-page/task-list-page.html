@@ -147,7 +147,11 @@
 			</div>
 
 			@if (pendingCreate() !== null) {
-				<!-- task-form T13 (create, completed preset = pendingCreate) -->
+				<app-task-form
+					[completedPreset]="pendingCreate() ?? false"
+					(cancelled)="closeCreate()"
+					(saved)="closeCreate()"
+				/>
 			}
 			@if (editingId() !== null) {
 				<!-- task-form T14 (edit, id = editingId) -->

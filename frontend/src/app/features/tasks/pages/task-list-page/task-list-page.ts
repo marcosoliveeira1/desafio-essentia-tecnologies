@@ -9,11 +9,12 @@ import {
 import type { Task } from '../../../../core/models/task.model'
 import { TaskStoreService } from '../../../../core/services/task-store.service'
 import { ConfirmDialog } from '../../components/confirm-dialog/confirm-dialog'
+import { TaskForm } from '../../components/task-form/task-form'
 import { TaskItem } from '../../components/task-item/task-item'
 
 @Component({
 	changeDetection: ChangeDetectionStrategy.OnPush,
-	imports: [TaskItem, ConfirmDialog],
+	imports: [TaskItem, ConfirmDialog, TaskForm],
 	selector: 'app-task-list-page',
 	styleUrl: './task-list-page.css',
 	templateUrl: './task-list-page.html',
