@@ -65,13 +65,11 @@ async function main(): Promise<void> {
       return
     }
     for (const demoTask of DEMO_TASKS) {
-      // create ainda não persiste userId (T18 escopa por usuário) — o UPDATE abaixo vincula.
-      const created = await repo.create({ title: demoTask.title, description: demoTask.description })
+      // T18: create já persiste userId (escopo por usuário).
+      const created = await repo.create({ title: demoTask.title, description: demoTask.description }, demo.id)
       if (demoTask.completed) {
-        await repo.update(created.id, { completed: true })
+        await repo.update(created.id, { completed: true }, demo.id)
       }
-      // Vincula ao demo (create ainda não persiste userId — T18 escopa por usuário).
-      await db.query('UPDATE tasks SET userId = ? WHERE id = ? AND userId IS NULL', [demo.id, created.id])
     }
     // eslint-disable-next-line no-console
     console.log(`[seed] ${DEMO_TASKS.length} tarefas demo criadas em ${config.db.database} (userId=${demo.id})`)

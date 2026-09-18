@@ -4,6 +4,9 @@ import { ValidationError } from '../../src/shared/errors/validation.error.js'
 import { InMemoryTaskRepository } from '../../src/modules/tasks/in-memory-task.repository.js'
 import { TaskService } from '../../src/modules/tasks/task.service.js'
 
+const USER_A = 1
+const USER_B = 2
+
 describe('TaskService (unit, repo in-memory)', () => {
   let repo: InMemoryTaskRepository
   let service: TaskService
@@ -14,7 +17,7 @@ describe('TaskService (unit, repo in-memory)', () => {
   })
 
   it('cria tarefa válida (completed nasce false)', async () => {
-    const task = await service.create({ title: 'Estudar', description: 'Cap 3' })
+    const task = await service.create(USER_A, { title: 'Estudar', description: 'Cap 3' })
     expect(task.id).toBeGreaterThan(0)
     expect(task.title).toBe('Estudar')
     expect(task.description).toBe('Cap 3')
@@ -23,187 +26,187 @@ describe('TaskService (unit, repo in-memory)', () => {
   })
 
   it('cria tarefa sem description (null)', async () => {
-    const task = await service.create({ title: 'Só título' })
+    const task = await service.create(USER_A, { title: 'Só título' })
     expect(task.description).toBeNull()
   })
 
   it('cria com trim no title', async () => {
-    const task = await service.create({ title: '  Comprar pão  ' })
+    const task = await service.create(USER_A, { title: '  Comprar pão  ' })
     expect(task.title).toBe('Comprar pão')
   })
 
   it('rejeita título vazio (400)', async () => {
-    await expect(service.create({ title: '' })).rejects.toMatchObject({ statusCode: 400, code: 'VALIDATION_ERROR' })
+    await expect(service.create(USER_A, { title: '' })).rejects.toMatchObject({ statusCode: 400, code: 'VALIDATION_ERROR' })
   })
 
   it('rejeita título whitespace-only F3 (400)', async () => {
-    await expect(service.create({ title: '    ' })).rejects.toBeInstanceOf(ValidationError)
-    await expect(service.create({ title: '  \t\n ' })).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
+    await expect(service.create(USER_A, { title: '    ' })).rejects.toBeInstanceOf(ValidationError)
+    await expect(service.create(USER_A, { title: '  \t\n ' })).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
   })
 
   it('rejeita título com mais de 255 chars (400)', async () => {
-    await expect(service.create({ title: 'x'.repeat(256) })).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
+    await expect(service.create(USER_A, { title: 'x'.repeat(256) })).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
   })
 
   it('rejeita description com mais de 2000 chars (400)', async () => {
-    await expect(service.create({ title: 'ok', description: 'y'.repeat(2001) })).rejects.toMatchObject({
+    await expect(service.create(USER_A, { title: 'ok', description: 'y'.repeat(2001) })).rejects.toMatchObject({
       code: 'VALIDATION_ERROR',
     })
   })
 
   it('força completed=false mesmo quando o cliente envia true', async () => {
-    const task = await service.create({ title: 'novo', completed: true })
+    const task = await service.create(USER_A, { title: 'novo', completed: true })
     expect(task.completed).toBe(false)
   })
 
   it('getById retorna a tarefa (M1)', async () => {
-    const created = await service.create({ title: 'buscar' })
-    const found = await service.getById(created.id)
+    const created = await service.create(USER_A, { title: 'buscar' })
+    const found = await service.getById(USER_A, created.id)
     expect(found.title).toBe('buscar')
   })
 
   it('getById de id inexistente → 404 TASK_NOT_FOUND', async () => {
-    await expect(service.getById(999)).rejects.toMatchObject({ statusCode: 404, code: 'TASK_NOT_FOUND' })
+    await expect(service.getById(USER_A, 999)).rejects.toMatchObject({ statusCode: 404, code: 'TASK_NOT_FOUND' })
   })
 
   it('getById de id inválido → 400', async () => {
-    await expect(service.getById(0)).rejects.toBeInstanceOf(ValidationError)
-    await expect(service.getById(Number.NaN)).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
+    await expect(service.getById(USER_A, 0)).rejects.toBeInstanceOf(ValidationError)
+    await expect(service.getById(USER_A, Number.NaN)).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
   })
 
   it('update parcial altera só o campo enviado', async () => {
-    const created = await service.create({ title: 'orig', description: 'desc' })
-    const updated = await service.update(created.id, { description: 'nova' })
+    const created = await service.create(USER_A, { title: 'orig', description: 'desc' })
+    const updated = await service.update(USER_A, created.id, { description: 'nova' })
     expect(updated.description).toBe('nova')
     expect(updated.title).toBe('orig')
     expect(updated.completed).toBe(false)
   })
 
   it('toggle de completed preserva os demais campos', async () => {
-    const created = await service.create({ title: 't', description: 'd' })
-    const done = await service.update(created.id, { completed: true })
+    const created = await service.create(USER_A, { title: 't', description: 'd' })
+    const done = await service.update(USER_A, created.id, { completed: true })
     expect(done.completed).toBe(true)
     expect(done.title).toBe('t')
     expect(done.description).toBe('d')
-    const undone = await service.update(created.id, { completed: false })
+    const undone = await service.update(USER_A, created.id, { completed: false })
     expect(undone.completed).toBe(false)
   })
 
   it('update de id inexistente → 404', async () => {
-    await expect(service.update(4242, { title: 'x' })).rejects.toBeInstanceOf(NotFoundError)
+    await expect(service.update(USER_A, 4242, { title: 'x' })).rejects.toBeInstanceOf(NotFoundError)
   })
 
   it('update com body vazio → 400', async () => {
-    const created = await service.create({ title: 'x' })
-    await expect(service.update(created.id, {})).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
+    const created = await service.create(USER_A, { title: 'x' })
+    await expect(service.update(USER_A, created.id, {})).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
   })
 
   it('update rejeita title whitespace-only (400)', async () => {
-    const created = await service.create({ title: 'x' })
-    await expect(service.update(created.id, { title: '   ' })).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
+    const created = await service.create(USER_A, { title: 'x' })
+    await expect(service.update(USER_A, created.id, { title: '   ' })).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
   })
 
   it('update rejeita tipos errados (completed string → 400)', async () => {
-    const created = await service.create({ title: 'x' })
-    await expect(service.update(created.id, { completed: 'yes' as unknown as boolean })).rejects.toMatchObject({
+    const created = await service.create(USER_A, { title: 'x' })
+    await expect(service.update(USER_A, created.id, { completed: 'yes' as unknown as boolean })).rejects.toMatchObject({
       code: 'VALIDATION_ERROR',
     })
   })
 
   it('remove exclui e getById posterior dá 404', async () => {
-    const created = await service.create({ title: 'bye' })
-    await service.remove(created.id)
-    await expect(service.getById(created.id)).rejects.toMatchObject({ code: 'TASK_NOT_FOUND' })
+    const created = await service.create(USER_A, { title: 'bye' })
+    await service.remove(USER_A, created.id)
+    await expect(service.getById(USER_A, created.id)).rejects.toMatchObject({ code: 'TASK_NOT_FOUND' })
   })
 
   it('remove de id inexistente → 404', async () => {
-    await expect(service.remove(777)).rejects.toMatchObject({ code: 'TASK_NOT_FOUND' })
+    await expect(service.remove(USER_A, 777)).rejects.toMatchObject({ code: 'TASK_NOT_FOUND' })
   })
 
   it('list retorna em ordem crescente de position (desempate por id)', async () => {
-    const a = await service.create({ title: 'a' })
-    const b = await service.create({ title: 'b' })
-    const c = await service.create({ title: 'c' })
-    const list = await service.list()
+    const a = await service.create(USER_A, { title: 'a' })
+    const b = await service.create(USER_A, { title: 'b' })
+    const c = await service.create(USER_A, { title: 'c' })
+    const list = await service.list(USER_A)
     expect(list.map((t) => t.id)).toEqual([a.id, b.id, c.id])
     expect(list.map((t) => t.position)).toEqual([1, 2, 3])
   })
 
   it('create recebe max+1 global', async () => {
-    const a = await service.create({ title: 'a' })
-    const b = await service.create({ title: 'b' })
+    const a = await service.create(USER_A, { title: 'a' })
+    const b = await service.create(USER_A, { title: 'b' })
     expect(a.position).toBe(1)
     expect(b.position).toBe(2)
-    await service.remove(a.id)
-    const c = await service.create({ title: 'c' })
+    await service.remove(USER_A, a.id)
+    const c = await service.create(USER_A, { title: 'c' })
     expect(c.position).toBe(3)
   })
 
   it('create ignora position enviado pelo cliente', async () => {
-    const task = await service.create({ title: 'x', position: 99 })
+    const task = await service.create(USER_A, { title: 'x', position: 99 })
     expect(task.position).toBe(1)
-    const other = await service.create({ title: 'y', position: 0 })
+    const other = await service.create(USER_A, { title: 'y', position: 0 })
     expect(other.position).toBe(2)
   })
 
   it('list em position asc após PATCH de position', async () => {
-    const a = await service.create({ title: 'a' })
-    const b = await service.create({ title: 'b' })
-    const c = await service.create({ title: 'c' })
-    await service.update(c.id, { position: 0 })
-    const list = await service.list()
+    const a = await service.create(USER_A, { title: 'a' })
+    const b = await service.create(USER_A, { title: 'b' })
+    const c = await service.create(USER_A, { title: 'c' })
+    await service.update(USER_A, c.id, { position: 0 })
+    const list = await service.list(USER_A)
     expect(list.map((t) => t.id)).toEqual([c.id, a.id, b.id])
   })
 
   it('PATCH position reordena a lista', async () => {
-    const a = await service.create({ title: 'a' })
-    const b = await service.create({ title: 'b' })
-    await service.update(b.id, { position: 0 })
-    const list = await service.list()
+    const a = await service.create(USER_A, { title: 'a' })
+    const b = await service.create(USER_A, { title: 'b' })
+    await service.update(USER_A, b.id, { position: 0 })
+    const list = await service.list(USER_A)
     expect(list.map((t) => t.id)).toEqual([b.id, a.id])
     expect(list[0].position).toBe(0)
   })
 
   it('update rejeita position negativo (400)', async () => {
-    const created = await service.create({ title: 'x' })
-    await expect(service.update(created.id, { position: -1 })).rejects.toMatchObject({
+    const created = await service.create(USER_A, { title: 'x' })
+    await expect(service.update(USER_A, created.id, { position: -1 })).rejects.toMatchObject({
       code: 'VALIDATION_ERROR',
     })
   })
 
   it('update rejeita position não-inteiro (400)', async () => {
-    const created = await service.create({ title: 'x' })
-    await expect(service.update(created.id, { position: 1.5 })).rejects.toMatchObject({
+    const created = await service.create(USER_A, { title: 'x' })
+    await expect(service.update(USER_A, created.id, { position: 1.5 })).rejects.toMatchObject({
       code: 'VALIDATION_ERROR',
     })
-    await expect(service.update(created.id, { position: 'x' as unknown as number })).rejects.toMatchObject({
+    await expect(service.update(USER_A, created.id, { position: 'x' as unknown as number })).rejects.toMatchObject({
       code: 'VALIDATION_ERROR',
     })
   })
 
   it('reorder aplica nova ordem com positions 0,1,2', async () => {
-    const a = await service.create({ title: 'a' })
-    const b = await service.create({ title: 'b' })
-    const c = await service.create({ title: 'c' })
-    const result = await service.reorder([c.id, a.id, b.id])
+    const a = await service.create(USER_A, { title: 'a' })
+    const b = await service.create(USER_A, { title: 'b' })
+    const c = await service.create(USER_A, { title: 'c' })
+    const result = await service.reorder(USER_A, [c.id, a.id, b.id])
     expect(result.map((t) => t.id)).toEqual([c.id, a.id, b.id])
     expect(result.map((t) => t.position)).toEqual([0, 1, 2])
   })
 
   it('reorder parcial: não-listadas mantêm position', async () => {
-    const a = await service.create({ title: 'a' })
-    const b = await service.create({ title: 'b' })
-    const c = await service.create({ title: 'c' })
-    await service.reorder([c.id, a.id])
-    const kept = await service.getById(b.id)
+    const a = await service.create(USER_A, { title: 'a' })
+    const b = await service.create(USER_A, { title: 'b' })
+    const c = await service.create(USER_A, { title: 'c' })
+    await service.reorder(USER_A, [c.id, a.id])
+    const kept = await service.getById(USER_A, b.id)
     expect(kept.position).toBe(2)
-    const list = await service.list()
+    const list = await service.list(USER_A)
     expect(list.map((t) => t.id)).toEqual([c.id, a.id, b.id])
   })
 
   it('reorder com id inexistente → 404 TASK_NOT_FOUND com missingIds', async () => {
-    const a = await service.create({ title: 'a' })
-    await expect(service.reorder([a.id, 9999])).rejects.toMatchObject({
+    const a = await service.create(USER_A, { title: 'a' })
+    await expect(service.reorder(USER_A, [a.id, 9999])).rejects.toMatchObject({
       statusCode: 404,
       code: 'TASK_NOT_FOUND',
       details: { missingIds: [9999] },
@@ -211,24 +214,70 @@ describe('TaskService (unit, repo in-memory)', () => {
   })
 
   it('reorder rejeita duplicado/vazio/<1/não-inteiro (400)', async () => {
-    const a = await service.create({ title: 'a' })
-    const b = await service.create({ title: 'b' })
-    await expect(service.reorder([a.id, a.id])).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
-    await expect(service.reorder([])).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
-    await expect(service.reorder([0])).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
-    await expect(service.reorder([-1])).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
-    await expect(service.reorder([1.5])).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
-    await expect(service.reorder(['x' as unknown as number])).rejects.toMatchObject({
+    const a = await service.create(USER_A, { title: 'a' })
+    const b = await service.create(USER_A, { title: 'b' })
+    await expect(service.reorder(USER_A, [a.id, a.id])).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
+    await expect(service.reorder(USER_A, [])).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
+    await expect(service.reorder(USER_A, [0])).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
+    await expect(service.reorder(USER_A, [-1])).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
+    await expect(service.reorder(USER_A, [1.5])).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
+    await expect(service.reorder(USER_A, ['x' as unknown as number])).rejects.toMatchObject({
       code: 'VALIDATION_ERROR',
     })
     void b
   })
 
   it('reorder é atômico: falha não muta positions', async () => {
-    const a = await service.create({ title: 'a' })
-    const b = await service.create({ title: 'b' })
-    await expect(service.reorder([b.id, 9999])).rejects.toMatchObject({ code: 'TASK_NOT_FOUND' })
-    expect((await service.getById(a.id)).position).toBe(1)
-    expect((await service.getById(b.id)).position).toBe(2)
+    const a = await service.create(USER_A, { title: 'a' })
+    const b = await service.create(USER_A, { title: 'b' })
+    await expect(service.reorder(USER_A, [b.id, 9999])).rejects.toMatchObject({ code: 'TASK_NOT_FOUND' })
+    expect((await service.getById(USER_A, a.id)).position).toBe(1)
+    expect((await service.getById(USER_A, b.id)).position).toBe(2)
+  })
+
+  // T18: escopo por usuário (A/B).
+  it('create persiste userId do dono', async () => {
+    const task = await service.create(USER_A, { title: 'minha' })
+    expect(task.userId).toBe(USER_A)
+  })
+
+  it('list é escopado: A não vê tarefas de B', async () => {
+    await service.create(USER_A, { title: 'de-A' })
+    await service.create(USER_B, { title: 'de-B' })
+    const listA = await service.list(USER_A)
+    const listB = await service.list(USER_B)
+    expect(listA.map((t) => t.title)).toEqual(['de-A'])
+    expect(listB.map((t) => t.title)).toEqual(['de-B'])
+  })
+
+  it('cross-user getById/update/remove → 404 TASK_NOT_FOUND', async () => {
+    const owned = await service.create(USER_A, { title: 'secreta' })
+    await expect(service.getById(USER_B, owned.id)).rejects.toMatchObject({ statusCode: 404, code: 'TASK_NOT_FOUND' })
+    await expect(service.update(USER_B, owned.id, { title: 'hack' })).rejects.toMatchObject({
+      statusCode: 404,
+      code: 'TASK_NOT_FOUND',
+    })
+    await expect(service.remove(USER_B, owned.id)).rejects.toMatchObject({ statusCode: 404, code: 'TASK_NOT_FOUND' })
+    // Dono ainda vê intacta.
+    expect((await service.getById(USER_A, owned.id)).title).toBe('secreta')
+  })
+
+  it('position (max+1) é por dono', async () => {
+    const a1 = await service.create(USER_A, { title: 'a1' })
+    const b1 = await service.create(USER_B, { title: 'b1' })
+    expect(a1.position).toBe(1)
+    expect(b1.position).toBe(1)
+    const a2 = await service.create(USER_A, { title: 'a2' })
+    expect(a2.position).toBe(2)
+  })
+
+  it('reorder cross-user → 404 com missingIds', async () => {
+    const owned = await service.create(USER_A, { title: 'a' })
+    await service.create(USER_B, { title: 'b' })
+    await expect(service.reorder(USER_B, [owned.id])).rejects.toMatchObject({
+      statusCode: 404,
+      code: 'TASK_NOT_FOUND',
+      details: { missingIds: [owned.id] },
+    })
   })
 })

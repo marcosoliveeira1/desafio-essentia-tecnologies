@@ -5,33 +5,35 @@ import type { CreateTaskInput, ITaskRepository, UpdateTaskInput } from './task.r
 
 // Regras de negócio de tarefas — não conhece HTTP nem SQL.
 // Toda validação de domínio lança AppError (400/404); o error-handler monta o HTTP.
+// T18 (breaking intencional): userId OBRIGATÓRIO como primeiro arg em toda chamada.
+// Cross-user → NotFoundError TASK_NOT_FOUND 404 (não vaza existência alheia).
 export class TaskService {
   constructor(private readonly repo: ITaskRepository) {}
 
   // Ordem crescente de position (o repositório garante; desempate por id).
-  list(): Promise<TaskEntity[]> {
-    return this.repo.findAll()
+  list(userId: number): Promise<TaskEntity[]> {
+    return this.repo.findAll(userId)
   }
 
-  async getById(id: number): Promise<TaskEntity> {
+  async getById(userId: number, id: number): Promise<TaskEntity> {
     this.assertValidId(id)
-    const task = await this.repo.findById(id)
+    const task = await this.repo.findById(id, userId)
     if (task === null) {
       throw new NotFoundError('Tarefa não encontrada', 'TASK_NOT_FOUND')
     }
     return task
   }
 
-  async create(input: CreateTaskInput): Promise<TaskEntity> {
+  async create(userId: number, input: CreateTaskInput): Promise<TaskEntity> {
     const title = this.normalizeTitle(input?.title)
     const description = this.normalizeDescription(input?.description)
     // `completed` sempre nasce false, mesmo que o cliente envie true.
-    // `position` é sempre MAX+1 GLOBAL (input do cliente ignorado).
-    const maxPosition = await this.repo.getMaxPosition()
-    return this.repo.create({ title, description, completed: false, position: maxPosition + 1 })
+    // `position` é sempre MAX+1 do DONO (input do cliente ignorado).
+    const maxPosition = await this.repo.getMaxPosition(userId)
+    return this.repo.create({ title, description, completed: false, position: maxPosition + 1 }, userId)
   }
 
-  async update(id: number, patch: UpdateTaskInput): Promise<TaskEntity> {
+  async update(userId: number, id: number, patch: UpdateTaskInput): Promise<TaskEntity> {
     this.assertValidId(id)
     if (patch === null || typeof patch !== 'object' || Object.keys(patch).length === 0) {
       throw new ValidationError('Corpo da requisição vazio', [{ field: 'body', message: 'envie ao menos um campo' }])
@@ -57,29 +59,29 @@ export class TaskService {
       }
       data.position = patch.position
     }
-    const existing = await this.repo.findById(id)
+    const existing = await this.repo.findById(id, userId)
     if (existing === null) {
       throw new NotFoundError('Tarefa não encontrada', 'TASK_NOT_FOUND')
     }
-    const updated = await this.repo.update(id, data)
+    const updated = await this.repo.update(id, data, userId)
     if (updated === null) {
       throw new NotFoundError('Tarefa não encontrada', 'TASK_NOT_FOUND')
     }
     return updated
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(userId: number, id: number): Promise<void> {
     this.assertValidId(id)
-    const deleted = await this.repo.delete(id)
+    const deleted = await this.repo.delete(id, userId)
     if (!deleted) {
       throw new NotFoundError('Tarefa não encontrada', 'TASK_NOT_FOUND')
     }
   }
 
   // R1: reorder — position = índice 0-based; não-listadas mantêm position.
-  // Guards 400 (vazio/duplicado/não-inteiro/<1) + 404 (id inexistente, details {missingIds}).
-  // Sem evento de histórico. Retorna lista na ordem do input.
-  async reorder(ids: unknown): Promise<TaskEntity[]> {
+  // Guards 400 (vazio/duplicado/não-inteiro/<1) + 404 (id inexistente OU de outro
+  // dono, details {missingIds}). Sem evento de histórico. Retorna na ordem do input.
+  async reorder(userId: number, ids: unknown): Promise<TaskEntity[]> {
     if (!Array.isArray(ids) || ids.length === 0) {
       throw new ValidationError('Dados inválidos', [
         { field: 'ids', message: 'deve ser um array não-vazio' },
@@ -98,13 +100,13 @@ export class TaskService {
         { field: 'ids', message: 'não deve conter ids duplicados' },
       ])
     }
-    const all = await this.repo.findAll()
+    const all = await this.repo.findAll(userId)
     const existing = new Set(all.map((t) => t.id))
     const missingIds = orderedIds.filter((id) => !existing.has(id))
     if (missingIds.length > 0) {
       throw new NotFoundError('Tarefa não encontrada', 'TASK_NOT_FOUND', { missingIds })
     }
-    return this.repo.updatePositions(orderedIds)
+    return this.repo.updatePositions(orderedIds, userId)
   }
 
   private assertValidId(id: number): void {

@@ -4,19 +4,28 @@ import type { CreateTaskInput, ITaskRepository, UpdateTaskInput } from './task.r
 
 // Fake p/ unit tests do service (LSP: intercambiável com o TypeOrmTaskRepository).
 // Sem banco, sem estado global — uma instância nova por teste.
+// T18: escopo por dono — findAll/fingById/getMaxPosition/updatePositions filtram por userId.
 export class InMemoryTaskRepository implements ITaskRepository {
   private readonly tasks = new Map<number, TaskEntity>()
   private seq = 1
 
-  async findAll(): Promise<TaskEntity[]> {
-    return [...this.tasks.values()].sort((a, b) => a.position - b.position || a.id - b.id)
+  async findAll(userId?: number): Promise<TaskEntity[]> {
+    const all = [...this.tasks.values()].filter((t) => userId === undefined || t.userId === userId)
+    return all.sort((a, b) => a.position - b.position || a.id - b.id)
   }
 
-  async findById(id: number): Promise<TaskEntity | null> {
-    return this.tasks.get(id) ?? null
+  async findById(id: number, userId?: number): Promise<TaskEntity | null> {
+    const task = this.tasks.get(id) ?? null
+    if (task === null) {
+      return null
+    }
+    if (userId !== undefined && task.userId !== userId) {
+      return null
+    }
+    return task
   }
 
-  async create(data: CreateTaskInput): Promise<TaskEntity> {
+  async create(data: CreateTaskInput, userId?: number): Promise<TaskEntity> {
     const now = new Date()
     const task = Object.assign(new TaskEntity(), {
       id: this.seq++,
@@ -24,6 +33,7 @@ export class InMemoryTaskRepository implements ITaskRepository {
       description: data.description ?? null,
       completed: false,
       position: data.position ?? 0,
+      userId: userId ?? null,
       createdAt: now,
       updatedAt: now,
     } satisfies Partial<TaskEntity>)
@@ -31,9 +41,12 @@ export class InMemoryTaskRepository implements ITaskRepository {
     return task
   }
 
-  async update(id: number, data: UpdateTaskInput): Promise<TaskEntity | null> {
+  async update(id: number, data: UpdateTaskInput, userId?: number): Promise<TaskEntity | null> {
     const current = this.tasks.get(id)
     if (!current) {
+      return null
+    }
+    if (userId !== undefined && current.userId !== userId) {
       return null
     }
     const next = Object.assign(new TaskEntity(), {
@@ -48,9 +61,12 @@ export class InMemoryTaskRepository implements ITaskRepository {
     return next
   }
 
-  async getMaxPosition(): Promise<number> {
+  async getMaxPosition(userId?: number): Promise<number> {
     let max = 0
     for (const task of this.tasks.values()) {
+      if (userId !== undefined && task.userId !== userId) {
+        continue
+      }
       if (task.position > max) {
         max = task.position
       }
@@ -58,13 +74,29 @@ export class InMemoryTaskRepository implements ITaskRepository {
     return max
   }
 
-  async delete(id: number): Promise<boolean> {
+  async delete(id: number, userId?: number): Promise<boolean> {
+    const current = this.tasks.get(id)
+    if (!current) {
+      return false
+    }
+    if (userId !== undefined && current.userId !== userId) {
+      return false
+    }
     return this.tasks.delete(id)
   }
 
-  // R1 two-phase: valida todos antes de mutar (atomicidade no fake).
-  async updatePositions(orderedIds: number[], _userId?: number): Promise<TaskEntity[]> {
-    const missingIds = orderedIds.filter((id) => !this.tasks.has(id))
+  // R1 two-phase: valida todos (existência + dono) antes de mutar (atomicidade no fake).
+  async updatePositions(orderedIds: number[], userId?: number): Promise<TaskEntity[]> {
+    const missingIds = orderedIds.filter((id) => {
+      const task = this.tasks.get(id)
+      if (!task) {
+        return true
+      }
+      if (userId !== undefined && task.userId !== userId) {
+        return true
+      }
+      return false
+    })
     if (missingIds.length > 0) {
       throw new NotFoundError('Tarefa não encontrada', 'TASK_NOT_FOUND', { missingIds })
     }
