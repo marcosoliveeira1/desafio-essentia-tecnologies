@@ -5,6 +5,7 @@
 		<div class="flex items-center space-x-2">
 			<span class="text-lg font-bold text-navy">Essentia Tasks</span>
 		</div>
+		<div class="flex items-center gap-2 sm:gap-4">
 		<div class="relative flex-1 sm:flex-none">
 			<input
 				type="text"
@@ -26,6 +27,15 @@
 					d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
 				></path>
 			</svg>
+		</div>
+		<button
+			type="button"
+			title="Sair"
+			(click)="logout()"
+			class="rounded-full border border-gray-200 px-3 py-1.5 text-xs text-gray-400 hover:text-gray-700"
+		>
+			Sair
+		</button>
 		</div>
 	</header>
 
@@ -55,11 +65,11 @@
 				<div
 					class="flex h-9 w-9 items-center justify-center rounded-full bg-gold text-sm font-bold text-navy"
 				>
-					—
+					{{ avatarInitial() }}
 				</div>
 				<div class="min-w-0">
-					<p class="truncate text-sm leading-none font-semibold text-gray-800">—</p>
-					<p class="mt-1 truncate text-xs text-gray-400">—</p>
+					<p class="truncate text-sm leading-none font-semibold text-gray-800">{{ authStore.user()?.name ?? '—' }}</p>
+					<p class="mt-1 truncate text-xs text-gray-400">{{ authStore.user()?.email ?? '—' }}</p>
 				</div>
 			</div>
 		</aside>

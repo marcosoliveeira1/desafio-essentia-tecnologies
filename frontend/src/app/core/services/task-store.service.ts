@@ -217,4 +217,10 @@ export class TaskStoreService {
 	clearError(): void {
 		this.error.set(null)
 	}
+
+	// T20: limpa a lista no logout para o próximo login não ver dados alheios.
+	clear(): void {
+		this.tasks.set([])
+		this.error.set(null)
+	}
 }

@@ -6,7 +6,9 @@ import {
 	type OnInit,
 	signal,
 } from '@angular/core'
+import { Router } from '@angular/router'
 import type { Task } from '../../../../core/models/task.model'
+import { AuthStoreService } from '../../../../core/services/auth-store.service'
 import { TaskStoreService } from '../../../../core/services/task-store.service'
 import { EmptyState } from '../../../../shared/components/empty-state/empty-state'
 import { LoadingSpinner } from '../../../../shared/components/loading-spinner/loading-spinner'
@@ -31,6 +33,8 @@ import { TaskItem } from '../../components/task-item/task-item'
 })
 export class TaskListPage implements OnInit {
 	protected readonly store = inject(TaskStoreService)
+	protected readonly authStore = inject(AuthStoreService)
+	private readonly router = inject(Router)
 
 	protected readonly todo = computed(() =>
 		this.store.filteredTasks().filter((task) => !task.completed),
@@ -52,8 +56,19 @@ export class TaskListPage implements OnInit {
 	} | null>(null)
 	protected readonly draggedId = signal<number | null>(null)
 
+	protected readonly avatarInitial = computed(() => {
+		const name = this.authStore.user()?.name?.trim() ?? ''
+		return name.length > 0 ? name.charAt(0).toUpperCase() : '?'
+	})
+
 	ngOnInit(): void {
 		this.store.load()
+	}
+
+	protected logout(): void {
+		this.authStore.logout()
+		this.store.clear()
+		void this.router.navigate(['/auth/login'])
 	}
 
 	protected onSearch(event: Event): void {
