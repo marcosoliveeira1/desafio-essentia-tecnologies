@@ -15,6 +15,7 @@ import { LoadingSpinner } from '../../../../shared/components/loading-spinner/lo
 import { ConfirmDialog } from '../../components/confirm-dialog/confirm-dialog'
 import { TaskFilters } from '../../components/task-filters/task-filters'
 import { TaskForm } from '../../components/task-form/task-form'
+import { TaskHistory } from '../../components/task-history/task-history'
 import { TaskItem } from '../../components/task-item/task-item'
 
 @Component({
@@ -24,6 +25,7 @@ import { TaskItem } from '../../components/task-item/task-item'
 		ConfirmDialog,
 		TaskForm,
 		TaskFilters,
+		TaskHistory,
 		EmptyState,
 		LoadingSpinner,
 	],
@@ -49,6 +51,16 @@ export class TaskListPage implements OnInit {
 		() => this.store.tasks().find((t) => t.id === this.editingId()) ?? null,
 	)
 	protected readonly pendingDelete = signal<Task | null>(null)
+	protected readonly historyTaskId = signal<number | null>(null)
+	protected readonly historyFeedOpen = signal(false)
+	protected readonly historyOpen = computed(
+		() => this.historyFeedOpen() || this.historyTaskId() !== null,
+	)
+	protected readonly historyTitle = computed(
+		() =>
+			this.store.tasks().find((t) => t.id === this.historyTaskId())
+				?.title ?? null,
+	)
 	protected readonly dragOver = signal<'todo' | 'done' | null>(null)
 	protected readonly dropHint = signal<{
 		targetId: number
@@ -112,6 +124,21 @@ export class TaskListPage implements OnInit {
 		const task = this.pendingDelete()
 		this.pendingDelete.set(null)
 		if (task) this.store.remove(task.id)
+	}
+
+	protected openHistory(id: number): void {
+		this.historyFeedOpen.set(false)
+		this.historyTaskId.set(id)
+	}
+
+	protected openFeed(): void {
+		this.historyTaskId.set(null)
+		this.historyFeedOpen.set(true)
+	}
+
+	protected closeHistory(): void {
+		this.historyTaskId.set(null)
+		this.historyFeedOpen.set(false)
 	}
 
 	protected onColumnDragOver(event: DragEvent, column: 'todo' | 'done'): void {

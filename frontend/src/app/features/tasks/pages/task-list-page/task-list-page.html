@@ -53,9 +53,11 @@
 							store.totalCount()
 						}}</span>
 					</span>
-					<span
-						class="flex items-center rounded-lg px-3 py-2 text-sm font-medium text-gray-500"
-						>Atividades</span
+					<button
+						type="button"
+						(click)="openFeed()"
+						class="flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50"
+						>Atividades</button
 					>
 				</div>
 			</div>
@@ -153,17 +155,18 @@
 											dropHint()?.targetId === task.id &&
 											dropHint()?.before === false
 										"
-										(toggle)="onToggle(task.id)"
-										(edit)="onEdit(task.id)"
-										(delete)="askDelete(task)"
-										(dragstart)="onItemDragStart(task.id)"
-										(dragOverItem)="onItemDragOver($event)"
-										(dragleave)="onItemDragLeave()"
-										(dropOnItem)="onItemDrop($event)"
-									/>
-								}
-							</div>
-							@if (todo().length === 0) {
+									(toggle)="onToggle(task.id)"
+									(edit)="onEdit(task.id)"
+									(delete)="askDelete(task)"
+									(history)="openHistory(task.id)"
+									(dragstart)="onItemDragStart(task.id)"
+									(dragOverItem)="onItemDragOver($event)"
+									(dragleave)="onItemDragLeave()"
+									(dropOnItem)="onItemDrop($event)"
+								/>
+							}
+						</div>
+						@if (todo().length === 0) {
 								<p class="py-8 text-center text-xs text-gray-400">
 									Nenhuma tarefa pendente. Tudo em dia.
 								</p>
@@ -204,10 +207,11 @@
 											dropHint()?.targetId === task.id &&
 											dropHint()?.before === false
 										"
-										(toggle)="onToggle(task.id)"
-										(edit)="onEdit(task.id)"
-										(delete)="askDelete(task)"
-										(dragstart)="onItemDragStart(task.id)"
+									(toggle)="onToggle(task.id)"
+									(edit)="onEdit(task.id)"
+									(delete)="askDelete(task)"
+									(history)="openHistory(task.id)"
+									(dragstart)="onItemDragStart(task.id)"
 										(dragOverItem)="onItemDragOver($event)"
 										(dragleave)="onItemDragLeave()"
 										(dropOnItem)="onItemDrop($event)"
@@ -238,12 +242,18 @@
 					(saved)="closeEdit()"
 				/>
 			}
-			<app-confirm-dialog
-				[open]="pendingDelete() !== null"
-				[taskTitle]="pendingDelete()?.title ?? null"
-				(confirmed)="confirmDelete()"
-				(cancelled)="cancelDelete()"
-			/>
+		<app-confirm-dialog
+			[open]="pendingDelete() !== null"
+			[taskTitle]="pendingDelete()?.title ?? null"
+			(confirmed)="confirmDelete()"
+			(cancelled)="cancelDelete()"
+		/>
+		<app-task-history
+			[taskId]="historyTaskId()"
+			[taskTitle]="historyTitle()"
+			[open]="historyOpen()"
+			(closed)="closeHistory()"
+		/>
 		</main>
 	</div>
 </div>

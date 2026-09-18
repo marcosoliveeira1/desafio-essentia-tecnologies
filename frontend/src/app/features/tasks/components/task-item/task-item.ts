@@ -22,6 +22,7 @@ export class TaskItem {
 	readonly toggle = output<void>()
 	readonly edit = output<void>()
 	readonly delete = output<void>()
+	readonly history = output<void>()
 	readonly dragOverItem = output<{ targetId: number; before: boolean }>()
 	readonly dropOnItem = output<{ targetId: number; before: boolean }>()
 
