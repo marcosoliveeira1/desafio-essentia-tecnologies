@@ -31,6 +31,9 @@ export class TaskListPage implements OnInit {
 
 	protected readonly pendingCreate = signal<boolean | null>(null)
 	protected readonly editingId = signal<number | null>(null)
+	protected readonly editingTask = computed(
+		() => this.store.tasks().find((t) => t.id === this.editingId()) ?? null,
+	)
 	protected readonly pendingDelete = signal<Task | null>(null)
 	protected readonly dragOver = signal<'todo' | 'done' | null>(null)
 

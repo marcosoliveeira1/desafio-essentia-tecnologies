@@ -153,8 +153,12 @@
 					(saved)="closeCreate()"
 				/>
 			}
-			@if (editingId() !== null) {
-				<!-- task-form T14 (edit, id = editingId) -->
+			@if (editingTask() !== null) {
+				<app-task-form
+					[task]="editingTask()"
+					(cancelled)="closeEdit()"
+					(saved)="closeEdit()"
+				/>
 			}
 			<app-confirm-dialog
 				[open]="pendingDelete() !== null"

@@ -1,6 +1,7 @@
 import {
 	ChangeDetectionStrategy,
 	Component,
+	computed,
 	effect,
 	ElementRef,
 	inject,
@@ -36,7 +37,7 @@ function noWhitespaceValidator(
 export class TaskForm {
 	private readonly store = inject(TaskStoreService)
 
-	// T13: modo create apenas — `task` é ignorado; T14 o usará para edição.
+	// T14: `task` define modo edição; null = criação.
 	readonly task = input<Task | null>(null)
 	// Preset de coluna (A fazer / Concluídas). T13 NÃO envia `completed` no DTO.
 	readonly completedPreset = input(false)
@@ -45,6 +46,7 @@ export class TaskForm {
 	readonly saved = output<void>()
 
 	protected readonly submitting = signal(false)
+	protected readonly isEditing = computed(() => this.task() !== null)
 
 	readonly form = new FormGroup({
 		description: new FormControl('', {
@@ -66,6 +68,15 @@ export class TaskForm {
 
 	constructor() {
 		effect(() => {
+			const current = this.task()
+			if (current) {
+				this.form.setValue({
+					description: current.description ?? '',
+					title: current.title,
+				})
+			} else {
+				this.form.reset()
+			}
 			const native = this.dialog()?.nativeElement
 			if (!native) return
 			if (!native.open) native.showModal()
@@ -73,6 +84,7 @@ export class TaskForm {
 	}
 
 	protected onCancel(): void {
+		this.submitting.set(false)
 		this.cancelled.emit()
 	}
 
@@ -86,8 +98,14 @@ export class TaskForm {
 		const rawDescription = this.form.controls.description.value
 		const title = rawTitle.trim()
 		const description = rawDescription.trim() || null
-		const dto: CreateTaskDto = { description, title }
-		this.store.add(dto)
+		const current = this.task()
+		if (current) {
+			this.store.update(current.id, { description, title })
+		} else {
+			const dto: CreateTaskDto = { description, title }
+			this.store.add(dto)
+		}
+		this.submitting.set(false)
 		this.saved.emit()
 	}
 }
