@@ -1,0 +1,17 @@
+/* You can add global styles to this file, and also import other style files */
+
+@import "tailwindcss";
+
+@theme {
+	--color-navy: #263064;
+	--color-navy-dark: #1b2349;
+	--color-gold: #bfa95f;
+	--color-gold-light: #c4af69;
+	--color-ink: #212121;
+	--color-warm: #f2eedf;
+	--color-mist: #f2f2f2;
+
+	--font-sans: "Open Sans", ui-sans-serif, system-ui, sans-serif;
+
+	--shadow-brand: 0 8px 24px rgb(38 48 100 / 0.18);
+}

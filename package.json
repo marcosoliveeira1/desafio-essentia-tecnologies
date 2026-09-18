@@ -4,7 +4,7 @@
   "private": true,
   "description": "Task Manager TechX — monorepo (backend Fastify + frontend Angular + MySQL)",
   "engines": {
-    "node": "22.22.1",
+    "node": ">=22.22.3",
     "npm": ">=9"
   },
   "scripts": {
