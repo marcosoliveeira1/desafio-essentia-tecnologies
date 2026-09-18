@@ -2,6 +2,8 @@
 	[attr.draggable]="dragEnabled()"
 	(dragstart)="onDragStart($event)"
 	(dragend)="onDragEnd()"
+	(dragover)="onItemDragOver($event)"
+	(drop)="onItemDrop($event)"
 	class="space-y-2 rounded-xl border border-gray-100 bg-white p-4 shadow-sm"
 	[class.opacity-80]="task().completed"
 >

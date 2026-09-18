@@ -14,6 +14,7 @@ const MSG_ADD = 'Não foi possível criar a tarefa. Tente novamente.'
 const MSG_UPDATE = 'Não foi possível atualizar a tarefa. Tente novamente.'
 const MSG_TOGGLE = 'Não foi possível alterar o status da tarefa. Tente novamente.'
 const MSG_REMOVE = 'Não foi possível excluir a tarefa. Tente novamente.'
+const MSG_REORDER = 'Não foi possível reordenar as tarefas. Tente novamente.'
 
 @Injectable({ providedIn: 'root' })
 export class TaskStoreService {
@@ -151,54 +152,51 @@ export class TaskStoreService {
 	}
 
 	/**
-	 * Move de drag-and-drop entre as colunas do kanban.
+	 * Move de drag-and-drop entre as colunas do kanban (toggle-only).
 	 *
 	 * - Coluna diferente (`completed` diverge): persiste via
 	 *   `PATCH /api/tasks/:id` com `{ completed }` e substitui o item local
-	 *   pelo retorno da API.
-	 * - Mesma coluna (drop intra-coluna): append global — calcula
-	 *   `newPosition = max(position de todas tasks()) + 1` (global,
-	 *   independente de filtro/busca/sort) e persiste sempre via
-	 *   `PATCH /api/tasks/:id` com `{ position: newPosition }`, substituindo
-	 *   o item local pelo retorno da API. Reorder fino por índice está fora
-	 *   de escopo.
+	 *   pelo retorno da API (erro usa MSG_TOGGLE).
+	 * - Mesma coluna (drop intra-coluna): no-op — reorder fino por índice
+	 *   é feito via `reorder(ids)`, não via `move`.
 	 */
 	move(id: number, toCompleted: boolean): void {
 		const current = this.tasks().find((task) => task.id === id)
 		if (!current) return
-		if (current.completed !== toCompleted) {
-			this.loading.set(true)
-			this.error.set(null)
-			this.api.update(id, { completed: toCompleted }).subscribe({
-				error: () => {
-					this.error.set(MSG_TOGGLE)
-					this.loading.set(false)
-				},
-				next: (updated) => {
-					this.tasks.update((all) =>
-						all.map((task) => (task.id === id ? updated : task)),
-					)
-					this.loading.set(false)
-				},
-			})
-			return
-		}
-		const maxPosition = this.tasks().reduce(
-			(max, task) => Math.max(max, task.position ?? 0),
-			0,
-		)
-		const newPosition = maxPosition + 1
+		if (current.completed === toCompleted) return
 		this.loading.set(true)
 		this.error.set(null)
-		this.api.update(id, { position: newPosition }).subscribe({
+		this.api.update(id, { completed: toCompleted }).subscribe({
 			error: () => {
-				this.error.set(MSG_UPDATE)
+				this.error.set(MSG_TOGGLE)
 				this.loading.set(false)
 			},
 			next: (updated) => {
 				this.tasks.update((all) =>
 					all.map((task) => (task.id === id ? updated : task)),
 				)
+				this.loading.set(false)
+			},
+		})
+	}
+
+	/**
+	 * Reorder fino por ids globais completos.
+	 *
+	 * Persiste via `PATCH /api/tasks/reorder` com `{ ids }` e substitui
+	 * a lista local pelo retorno da API. Guard: lista vazia é no-op.
+	 */
+	reorder(ids: number[]): void {
+		if (ids.length === 0) return
+		this.loading.set(true)
+		this.error.set(null)
+		this.api.reorder(ids).subscribe({
+			error: () => {
+				this.error.set(MSG_REORDER)
+				this.loading.set(false)
+			},
+			next: (tasks) => {
+				this.tasks.set(tasks)
 				this.loading.set(false)
 			},
 		})

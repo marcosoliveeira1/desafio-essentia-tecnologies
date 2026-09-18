@@ -2,6 +2,22 @@
 	display: block;
 }
 
+:host(.drop-before) article {
+	box-shadow: 0 -3px 0 0 #bfa95f;
+}
+
+:host(.drop-after) article {
+	box-shadow: 0 3px 0 0 #bfa95f;
+}
+
 article[draggable='true'] {
 	cursor: grabbing;
+}
+
+.drop-before {
+	box-shadow: 0 -3px 0 0 #bfa95f;
+}
+
+.drop-after {
+	box-shadow: 0 3px 0 0 #bfa95f;
 }

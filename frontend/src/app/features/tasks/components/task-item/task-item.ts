@@ -20,6 +20,8 @@ export class TaskItem {
 	readonly toggle = output<void>()
 	readonly edit = output<void>()
 	readonly delete = output<void>()
+	readonly dragOverItem = output<{ targetId: number; before: boolean }>()
+	readonly dropOnItem = output<{ targetId: number; before: boolean }>()
 
 	protected readonly dragEnabled = signal(false)
 
@@ -33,6 +35,21 @@ export class TaskItem {
 
 	protected onDragStart(event: DragEvent): void {
 		event.dataTransfer?.setData('text/plain', String(this.task().id))
+	}
+
+	protected onItemDragOver(event: DragEvent): void {
+		event.preventDefault()
+		const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+		const before = event.clientY < rect.top + rect.height / 2
+		this.dragOverItem.emit({ before, targetId: this.task().id })
+	}
+
+	protected onItemDrop(event: DragEvent): void {
+		event.preventDefault()
+		event.stopPropagation()
+		const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+		const before = event.clientY < rect.top + rect.height / 2
+		this.dropOnItem.emit({ before, targetId: this.task().id })
 	}
 
 	protected onDragEnd(): void {

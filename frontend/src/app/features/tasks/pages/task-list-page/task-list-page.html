@@ -135,9 +135,21 @@
 								@for (task of todo(); track task.id) {
 									<app-task-item
 										[task]="task"
+										[class.drop-before]="
+											dropHint()?.targetId === task.id &&
+											dropHint()?.before === true
+										"
+										[class.drop-after]="
+											dropHint()?.targetId === task.id &&
+											dropHint()?.before === false
+										"
 										(toggle)="onToggle(task.id)"
 										(edit)="onEdit(task.id)"
 										(delete)="askDelete(task)"
+										(dragstart)="onItemDragStart(task.id)"
+										(dragOverItem)="onItemDragOver($event)"
+										(dragleave)="onItemDragLeave()"
+										(dropOnItem)="onItemDrop($event)"
 									/>
 								}
 							</div>
@@ -174,9 +186,21 @@
 								@for (task of done(); track task.id) {
 									<app-task-item
 										[task]="task"
+										[class.drop-before]="
+											dropHint()?.targetId === task.id &&
+											dropHint()?.before === true
+										"
+										[class.drop-after]="
+											dropHint()?.targetId === task.id &&
+											dropHint()?.before === false
+										"
 										(toggle)="onToggle(task.id)"
 										(edit)="onEdit(task.id)"
 										(delete)="askDelete(task)"
+										(dragstart)="onItemDragStart(task.id)"
+										(dragOverItem)="onItemDragOver($event)"
+										(dragleave)="onItemDragLeave()"
+										(dropOnItem)="onItemDrop($event)"
 									/>
 								}
 							</div>

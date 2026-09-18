@@ -23,4 +23,8 @@ export class TaskApiService {
 	remove(id: number): Observable<void> {
 		return this.http.delete<void>(`${this.base}/${id}`)
 	}
+
+	reorder(ids: number[]): Observable<Task[]> {
+		return this.http.patch<Task[]>(`${this.base}/reorder`, { ids })
+	}
 }

@@ -46,6 +46,11 @@ export class TaskListPage implements OnInit {
 	)
 	protected readonly pendingDelete = signal<Task | null>(null)
 	protected readonly dragOver = signal<'todo' | 'done' | null>(null)
+	protected readonly dropHint = signal<{
+		targetId: number
+		before: boolean
+	} | null>(null)
+	protected readonly draggedId = signal<number | null>(null)
 
 	ngOnInit(): void {
 		this.store.load()
@@ -101,14 +106,52 @@ export class TaskListPage implements OnInit {
 
 	protected onColumnDragLeave(): void {
 		this.dragOver.set(null)
+		this.dropHint.set(null)
 	}
 
 	protected onColumnDrop(event: DragEvent, toCompleted: boolean): void {
 		event.preventDefault()
 		this.dragOver.set(null)
+		this.dropHint.set(null)
+		this.draggedId.set(null)
 		const raw = event.dataTransfer?.getData('text/plain')
 		const id = Number(raw)
 		if (!Number.isInteger(id)) return
 		this.store.move(id, toCompleted)
+	}
+
+	protected onItemDragStart(id: number): void {
+		this.draggedId.set(id)
+	}
+
+	protected onItemDragOver(hint: { targetId: number; before: boolean }): void {
+		this.dropHint.set(hint)
+	}
+
+	protected onItemDragLeave(): void {
+		this.dropHint.set(null)
+	}
+
+	protected onItemDrop(hint: { targetId: number; before: boolean }): void {
+		const draggedId = this.draggedId()
+		this.draggedId.set(null)
+		this.dropHint.set(null)
+		this.dragOver.set(null)
+		if (draggedId === null || draggedId === hint.targetId) return
+		const all = this.store.tasks()
+		const dragged = all.find((task) => task.id === draggedId)
+		const target = all.find((task) => task.id === hint.targetId)
+		if (!dragged || !target) return
+		if (dragged.completed !== target.completed) {
+			this.store.move(draggedId, target.completed)
+			return
+		}
+		if (this.store.sort() !== 'manual' || this.store.search().trim() !== '')
+			return
+		const ids = all.map((task) => task.id).filter((id) => id !== draggedId)
+		const targetIndex = ids.indexOf(hint.targetId)
+		if (targetIndex === -1) return
+		ids.splice(hint.before ? targetIndex : targetIndex + 1, 0, draggedId)
+		this.store.reorder(ids)
 	}
 }

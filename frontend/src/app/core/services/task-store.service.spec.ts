@@ -24,6 +24,7 @@ describe('TaskStoreService', () => {
 		create: vi.fn(),
 		list: vi.fn(),
 		remove: vi.fn(),
+		reorder: vi.fn(),
 		update: vi.fn(),
 	}
 
@@ -104,42 +105,58 @@ describe('TaskStoreService', () => {
 		expect(store.tasks()).toEqual([updated])
 	})
 
-	it('move na mesma coluna persiste via PATCH com { position: max+1 global }', () => {
+	it('move na mesma coluna é no-op (sem chamada HTTP)', () => {
 		store.tasks.set([
 			makeTask({ id: 1, position: 1 }),
 			makeTask({ id: 2, position: 5 }),
-			makeTask({ completed: true, id: 3, position: 3 }),
 		])
-		const updated = makeTask({ id: 1, position: 6 })
-		spyObj.update.mockReturnValue(of(updated))
 
 		store.move(1, false)
 
-		expect(spyObj.update).toHaveBeenCalledTimes(1)
-		expect(spyObj.update).toHaveBeenCalledWith(1, { position: 6 })
+		expect(spyObj.update).not.toHaveBeenCalled()
 		expect(store.tasks()).toEqual([
-			updated,
+			makeTask({ id: 1, position: 1 }),
 			makeTask({ id: 2, position: 5 }),
-			makeTask({ completed: true, id: 3, position: 3 }),
 		])
 		expect(store.loading()).toBe(false)
 		expect(store.error()).toBeNull()
 	})
 
-	it('erro no reorder intra-coluna seta mensagem PT-BR e preserva tasks', () => {
-		const before = [
-			makeTask({ id: 1, position: 1 }),
-			makeTask({ id: 2, position: 5 }),
-		]
+	it('reorder substitui tasks pelo retorno da API', () => {
+		store.tasks.set([makeTask({ id: 1 }), makeTask({ id: 2 })])
+		const reordered = [makeTask({ id: 2 }), makeTask({ id: 1 })]
+		spyObj.reorder.mockReturnValue(of(reordered))
+
+		store.reorder([2, 1])
+
+		expect(spyObj.reorder).toHaveBeenCalledTimes(1)
+		expect(spyObj.reorder).toHaveBeenCalledWith([2, 1])
+		expect(store.tasks()).toEqual(reordered)
+		expect(store.loading()).toBe(false)
+		expect(store.error()).toBeNull()
+	})
+
+	it('reorder com lista vazia é no-op (sem chamada HTTP)', () => {
+		const before = [makeTask({ id: 1 })]
 		store.tasks.set(before)
-		spyObj.update.mockReturnValue(throwError(() => new Error('fail')))
 
-		store.move(1, false)
+		store.reorder([])
 
-		expect(spyObj.update).toHaveBeenCalledTimes(1)
-		expect(spyObj.update).toHaveBeenCalledWith(1, { position: 6 })
+		expect(spyObj.reorder).not.toHaveBeenCalled()
+		expect(store.tasks()).toEqual(before)
+	})
+
+	it('erro no reorder seta mensagem PT-BR e preserva tasks', () => {
+		const before = [makeTask({ id: 1 }), makeTask({ id: 2 })]
+		store.tasks.set(before)
+		spyObj.reorder.mockReturnValue(throwError(() => new Error('fail')))
+
+		store.reorder([2, 1])
+
+		expect(spyObj.reorder).toHaveBeenCalledTimes(1)
+		expect(spyObj.reorder).toHaveBeenCalledWith([2, 1])
 		expect(store.error()).toBe(
-			'Não foi possível atualizar a tarefa. Tente novamente.',
+			'Não foi possível reordenar as tarefas. Tente novamente.',
 		)
 		expect(store.tasks()).toEqual(before)
 		expect(store.loading()).toBe(false)

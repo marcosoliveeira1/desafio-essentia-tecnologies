@@ -91,4 +91,17 @@ describe('TaskApiService', () => {
 		expect(req.request.method).toBe('DELETE')
 		req.flush(null)
 	})
+
+	it('reorder(ids) faz PATCH em /api/tasks/reorder com { ids } no body', () => {
+		const ids = [2, 3, 1]
+
+		service.reorder(ids).subscribe((tasks) => {
+			expect(tasks).toEqual([task])
+		})
+
+		const req = httpMock.expectOne('/api/tasks/reorder')
+		expect(req.request.method).toBe('PATCH')
+		expect(req.request.body).toEqual({ ids })
+		req.flush([task])
+	})
 })
