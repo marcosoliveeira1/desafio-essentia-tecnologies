@@ -3,18 +3,28 @@ import {
 	Component,
 	computed,
 	inject,
-	OnInit,
+	type OnInit,
 	signal,
 } from '@angular/core'
 import type { Task } from '../../../../core/models/task.model'
 import { TaskStoreService } from '../../../../core/services/task-store.service'
+import { EmptyState } from '../../../../shared/components/empty-state/empty-state'
+import { LoadingSpinner } from '../../../../shared/components/loading-spinner/loading-spinner'
 import { ConfirmDialog } from '../../components/confirm-dialog/confirm-dialog'
+import { TaskFilters } from '../../components/task-filters/task-filters'
 import { TaskForm } from '../../components/task-form/task-form'
 import { TaskItem } from '../../components/task-item/task-item'
 
 @Component({
 	changeDetection: ChangeDetectionStrategy.OnPush,
-	imports: [TaskItem, ConfirmDialog, TaskForm],
+	imports: [
+		TaskItem,
+		ConfirmDialog,
+		TaskForm,
+		TaskFilters,
+		EmptyState,
+		LoadingSpinner,
+	],
 	selector: 'app-task-list-page',
 	styleUrl: './task-list-page.css',
 	templateUrl: './task-list-page.html',
@@ -44,6 +54,10 @@ export class TaskListPage implements OnInit {
 	protected onSearch(event: Event): void {
 		const value = (event.target as HTMLInputElement).value
 		this.store.setSearch(value)
+	}
+
+	protected onRetry(): void {
+		this.store.load()
 	}
 
 	protected openCreate(presetCompleted: boolean): void {

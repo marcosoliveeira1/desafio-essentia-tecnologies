@@ -71,80 +71,124 @@
 				<div>
 					<h1 class="text-xl font-bold text-gray-800">Minhas tarefas</h1>
 				</div>
-				<button
-					type="button"
-					(click)="openCreate(false)"
-					class="flex items-center space-x-1 rounded-full bg-navy px-4 py-1.5 text-sm font-medium text-white shadow-brand hover:bg-navy-dark"
-				>
-					<span>+</span> <span>Criar tarefa</span>
-				</button>
+				<div class="flex flex-wrap items-center gap-2 sm:gap-3">
+					<app-task-filters />
+					<button
+						type="button"
+						(click)="openCreate(false)"
+						class="flex items-center space-x-1 rounded-full bg-navy px-4 py-1.5 text-sm font-medium text-white shadow-brand hover:bg-navy-dark"
+					>
+						<span>+</span> <span>Criar tarefa</span>
+					</button>
+				</div>
 			</div>
 
-			<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-				<section
-					class="min-h-[200px] rounded-xl bg-gray-50/50 p-4"
-					[class.drop-hint]="dragOver() === 'todo'"
-					(dragover)="onColumnDragOver($event, 'todo')"
-					(dragleave)="onColumnDragLeave()"
-					(drop)="onColumnDrop($event, false)"
+			@if (store.error()) {
+				<div
+					role="alert"
+					class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600"
 				>
-					<div class="mb-4 flex items-center justify-between">
-						<h2 class="text-sm font-semibold text-gray-700">
-							A fazer ({{ store.pendingCount() }})
-						</h2>
-						<button
-							type="button"
-							data-completed="false"
-							(click)="openCreate(false)"
-							class="font-bold text-gray-400 hover:text-gray-600"
-						>
-							+
-						</button>
-					</div>
-					<div class="space-y-3">
-						@for (task of todo(); track task.id) {
-							<app-task-item
-								[task]="task"
-								(toggle)="onToggle(task.id)"
-								(edit)="onEdit(task.id)"
-								(delete)="askDelete(task)"
-							/>
-						}
-					</div>
-				</section>
+					<span>{{ store.error() }}</span>
+					<button
+						type="button"
+						(click)="onRetry()"
+						class="rounded-full bg-white px-3 py-1 text-xs font-medium text-red-600 shadow-sm hover:bg-red-100"
+					>
+						Tentar novamente
+					</button>
+				</div>
+			}
 
-				<section
-					class="min-h-[200px] rounded-xl bg-gray-50/50 p-4"
-					[class.drop-hint]="dragOver() === 'done'"
-					(dragover)="onColumnDragOver($event, 'done')"
-					(dragleave)="onColumnDragLeave()"
-					(drop)="onColumnDrop($event, true)"
-				>
-					<div class="mb-4 flex items-center justify-between">
-						<h2 class="text-sm font-semibold text-gray-700">
-							Concluídas ({{ store.doneCount() }})
-						</h2>
-						<button
-							type="button"
-							data-completed="true"
-							(click)="openCreate(true)"
-							class="font-bold text-gray-400 hover:text-gray-600"
+			@if (store.loading()) {
+				<app-loading-spinner />
+			} @else if (store.tasks().length === 0) {
+				@if (!store.error()) {
+					<app-empty-state
+						title="Nenhuma tarefa ainda"
+						subtitle="Crie sua primeira tarefa com o botão acima."
+					/>
+				}
+			} @else {
+				<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+					@if (store.filter() !== 'done') {
+						<section
+							class="min-h-[200px] rounded-xl bg-gray-50/50 p-4"
+							[class.drop-hint]="dragOver() === 'todo'"
+							(dragover)="onColumnDragOver($event, 'todo')"
+							(dragleave)="onColumnDragLeave()"
+							(drop)="onColumnDrop($event, false)"
 						>
-							+
-						</button>
-					</div>
-					<div class="space-y-3">
-						@for (task of done(); track task.id) {
-							<app-task-item
-								[task]="task"
-								(toggle)="onToggle(task.id)"
-								(edit)="onEdit(task.id)"
-								(delete)="askDelete(task)"
-							/>
-						}
-					</div>
-				</section>
-			</div>
+							<div class="mb-4 flex items-center justify-between">
+								<h2 class="text-sm font-semibold text-gray-700">
+									A fazer ({{ store.pendingCount() }})
+								</h2>
+								<button
+									type="button"
+									data-completed="false"
+									(click)="openCreate(false)"
+									class="font-bold text-gray-400 hover:text-gray-600"
+								>
+									+
+								</button>
+							</div>
+							<div class="space-y-3">
+								@for (task of todo(); track task.id) {
+									<app-task-item
+										[task]="task"
+										(toggle)="onToggle(task.id)"
+										(edit)="onEdit(task.id)"
+										(delete)="askDelete(task)"
+									/>
+								}
+							</div>
+							@if (todo().length === 0) {
+								<p class="py-8 text-center text-xs text-gray-400">
+									Nenhuma tarefa pendente. Tudo em dia.
+								</p>
+							}
+						</section>
+					}
+
+					@if (store.filter() !== 'pending') {
+						<section
+							class="min-h-[200px] rounded-xl bg-gray-50/50 p-4"
+							[class.drop-hint]="dragOver() === 'done'"
+							(dragover)="onColumnDragOver($event, 'done')"
+							(dragleave)="onColumnDragLeave()"
+							(drop)="onColumnDrop($event, true)"
+						>
+							<div class="mb-4 flex items-center justify-between">
+								<h2 class="text-sm font-semibold text-gray-700">
+									Concluídas ({{ store.doneCount() }})
+								</h2>
+								<button
+									type="button"
+									data-completed="true"
+									(click)="openCreate(true)"
+									class="font-bold text-gray-400 hover:text-gray-600"
+								>
+									+
+								</button>
+							</div>
+							<div class="space-y-3">
+								@for (task of done(); track task.id) {
+									<app-task-item
+										[task]="task"
+										(toggle)="onToggle(task.id)"
+										(edit)="onEdit(task.id)"
+										(delete)="askDelete(task)"
+									/>
+								}
+							</div>
+							@if (done().length === 0) {
+								<p class="py-8 text-center text-xs text-gray-400">
+									Nada concluído ainda. Arraste um card para cá ou marque ✓.
+								</p>
+							}
+						</section>
+					}
+				</div>
+			}
 
 			@if (pendingCreate() !== null) {
 				<app-task-form
