@@ -1,3 +1,7 @@
+:host {
+	display: block;
+}
+
 article[draggable='true'] {
 	cursor: grab;
 }
