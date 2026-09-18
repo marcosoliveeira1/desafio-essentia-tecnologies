@@ -19,6 +19,11 @@ export class TaskEntity {
   @Column('int', { nullable: false, default: 0 })
   position!: number
 
+  // T16: FK lógica p/ users(id) — coluna simples, sem ManyToOne eager.
+  // Nullable até a Fase 5 (T18) escopar por usuário; ON DELETE SET NULL.
+  @Column('int', { nullable: true })
+  userId!: number | null
+
   @CreateDateColumn({ type: 'timestamp', nullable: false })
   createdAt!: Date
 
