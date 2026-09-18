@@ -25,4 +25,5 @@ export interface ITaskRepository {
   update(id: number, data: UpdateTaskInput, userId?: number): Promise<TaskEntity | null>
   delete(id: number, userId?: number): Promise<boolean>
   getMaxPosition(userId?: number): Promise<number>
+  updatePositions(orderedIds: number[], userId?: number): Promise<TaskEntity[]>
 }

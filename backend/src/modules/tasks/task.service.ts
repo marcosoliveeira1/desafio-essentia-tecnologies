@@ -76,6 +76,37 @@ export class TaskService {
     }
   }
 
+  // R1: reorder — position = índice 0-based; não-listadas mantêm position.
+  // Guards 400 (vazio/duplicado/não-inteiro/<1) + 404 (id inexistente, details {missingIds}).
+  // Sem evento de histórico. Retorna lista na ordem do input.
+  async reorder(ids: unknown): Promise<TaskEntity[]> {
+    if (!Array.isArray(ids) || ids.length === 0) {
+      throw new ValidationError('Dados inválidos', [
+        { field: 'ids', message: 'deve ser um array não-vazio' },
+      ])
+    }
+    for (const id of ids) {
+      if (!Number.isInteger(id) || (id as number) < 1) {
+        throw new ValidationError('Dados inválidos', [
+          { field: 'ids', message: 'deve conter apenas inteiros positivos' },
+        ])
+      }
+    }
+    const orderedIds = ids as number[]
+    if (new Set(orderedIds).size !== orderedIds.length) {
+      throw new ValidationError('Dados inválidos', [
+        { field: 'ids', message: 'não deve conter ids duplicados' },
+      ])
+    }
+    const all = await this.repo.findAll()
+    const existing = new Set(all.map((t) => t.id))
+    const missingIds = orderedIds.filter((id) => !existing.has(id))
+    if (missingIds.length > 0) {
+      throw new NotFoundError('Tarefa não encontrada', 'TASK_NOT_FOUND', { missingIds })
+    }
+    return this.repo.updatePositions(orderedIds)
+  }
+
   private assertValidId(id: number): void {
     if (!Number.isInteger(id) || id < 1) {
       throw new ValidationError('Dados inválidos', [{ field: 'id', message: 'deve ser um inteiro positivo' }])

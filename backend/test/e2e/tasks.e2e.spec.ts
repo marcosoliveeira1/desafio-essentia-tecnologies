@@ -245,3 +245,88 @@ describe('tasks validation and error edge cases (e2e)', () => {
     }
   })
 })
+
+// R1: PATCH /api/tasks/reorder (happy + GET confirma + edges 400/404 + formato de erro).
+describe('tasks reorder (e2e)', () => {
+  let app: FastifyInstance
+  let db: DataSource
+
+  beforeAll(async () => {
+    db = createMysqlDataSource(env.dbTest)
+    await db.initialize()
+    app = await buildApp({ db })
+  })
+
+  afterAll(async () => {
+    await app.close()
+    if (db.isInitialized) {
+      await db.destroy()
+    }
+  })
+
+  beforeEach(async () => {
+    await db.query('DELETE FROM tasks')
+  })
+
+  async function createTitles(titles: string[]): Promise<number[]> {
+    const ids: number[] = []
+    for (const title of titles) {
+      const res = await app.inject({ method: 'POST', url: '/api/tasks', payload: { title } })
+      expect(res.statusCode).toBe(201)
+      ids.push((res.json() as { id: number }).id)
+    }
+    return ids
+  }
+
+  it('happy 200: reorder aplica ordem + GET confirma positions 0,1,2', async () => {
+    const ids = await createTitles(['primeira', 'segunda', 'terceira'])
+    const res = await app.inject({
+      method: 'PATCH',
+      url: '/api/tasks/reorder',
+      payload: { ids: [ids[2], ids[0], ids[1]] },
+    })
+    expect(res.statusCode).toBe(200)
+    const body = res.json() as Array<{ id: number; position: number }>
+    expect(body.map((t) => t.id)).toEqual([ids[2], ids[0], ids[1]])
+    expect(body.map((t) => t.position)).toEqual([0, 1, 2])
+    const listed = await app.inject({ method: 'GET', url: '/api/tasks' })
+    expect(listed.statusCode).toBe(200)
+    const titles = (listed.json() as Array<{ title: string }>).map((t) => t.title)
+    expect(titles).toEqual(['terceira', 'primeira', 'segunda'])
+  })
+
+  it('edges 400: vazio/duplicado/<1/não-inteiro → VALIDATION_ERROR {code,message,details}', async () => {
+    const ids = await createTitles(['a', 'b'])
+    const cases: Array<Record<string, unknown>> = [
+      { ids: [] },
+      { ids: [ids[0], ids[0]] },
+      { ids: [0] },
+      { ids: [-1] },
+      { ids: [1.5] },
+      { ids: ['x'] },
+      { ids: 'nao-array' },
+    ]
+    for (const payload of cases) {
+      const res = await app.inject({ method: 'PATCH', url: '/api/tasks/reorder', payload })
+      expect(res.statusCode).toBe(400)
+      const body = res.json() as { code: string; message: string; details: unknown }
+      expect(body.code).toBe('VALIDATION_ERROR')
+      expect(typeof body.message).toBe('string')
+      expect(body.details).toBeDefined()
+    }
+  })
+
+  it('edge 404: id inexistente → TASK_NOT_FOUND com missingIds', async () => {
+    const ids = await createTitles(['a', 'b'])
+    const res = await app.inject({
+      method: 'PATCH',
+      url: '/api/tasks/reorder',
+      payload: { ids: [ids[0], 999999] },
+    })
+    expect(res.statusCode).toBe(404)
+    const body = res.json() as { code: string; message: string; details: { missingIds: number[] } }
+    expect(body.code).toBe('TASK_NOT_FOUND')
+    expect(typeof body.message).toBe('string')
+    expect(body.details.missingIds).toEqual([999999])
+  })
+})

@@ -1,4 +1,5 @@
 import type { DataSource, Repository } from 'typeorm'
+import { NotFoundError } from '../../shared/errors/not-found.error.js'
 import { TaskEntity } from './task.entity.js'
 import type { CreateTaskInput, ITaskRepository, UpdateTaskInput } from './task.repository.js'
 
@@ -6,8 +7,10 @@ import type { CreateTaskInput, ITaskRepository, UpdateTaskInput } from './task.r
 // no módulo tasks (controller/service nunca tocam no banco direto).
 export class TypeOrmTaskRepository implements ITaskRepository {
   private readonly orm: Repository<TaskEntity>
+  private readonly db: DataSource
 
   constructor(db: DataSource) {
+    this.db = db
     this.orm = db.getRepository(TaskEntity)
   }
 
@@ -61,5 +64,26 @@ export class TypeOrmTaskRepository implements ITaskRepository {
   async delete(id: number): Promise<boolean> {
     const result = await this.orm.delete(id)
     return (result.affected ?? 0) > 0
+  }
+
+  // R1: position = índice 0-based do array; retorna na ordem do input.
+  // Transacional: save em loop dentro de db.transaction (rollback em falha).
+  // Não-listadas mantêm position (só os ids informados são tocados).
+  async updatePositions(orderedIds: number[], _userId?: number): Promise<TaskEntity[]> {
+    return this.db.transaction(async (manager) => {
+      const repo = manager.getRepository(TaskEntity)
+      const result: TaskEntity[] = []
+      for (let index = 0; index < orderedIds.length; index++) {
+        const task = await repo.findOneBy({ id: orderedIds[index] })
+        if (task === null) {
+          throw new NotFoundError('Tarefa não encontrada', 'TASK_NOT_FOUND', {
+            missingIds: [orderedIds[index]],
+          })
+        }
+        task.position = index
+        result.push(await repo.save(task))
+      }
+      return result
+    })
   }
 }

@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
-import type { CreateTaskBody, UpdateTaskBody } from './task.schemas.js'
-import { createTaskBodySchema, taskParamsSchema, updateTaskBodySchema } from './task.schemas.js'
+import type { CreateTaskBody, ReorderTasksBody, UpdateTaskBody } from './task.schemas.js'
+import { createTaskBodySchema, reorderTasksBodySchema, taskParamsSchema, updateTaskBodySchema } from './task.schemas.js'
 import type { TaskService } from './task.service.js'
 
 // Camada HTTP: registra rotas, valida via TypeBox, delega ao service.
@@ -16,6 +16,12 @@ export function registerTaskRoutes(app: FastifyInstance, service: TaskService): 
   app.post('/api/tasks', { schema: { body: createTaskBodySchema } }, async (request, reply) => {
     const task = await service.create(request.body as CreateTaskBody)
     return reply.status(201).send(task)
+  })
+
+  // R1: ANTES de /api/tasks/:id (senão "reorder" cairia no params :id).
+  app.patch('/api/tasks/reorder', { schema: { body: reorderTasksBodySchema } }, async (request) => {
+    const { ids } = request.body as ReorderTasksBody
+    return service.reorder(ids)
   })
 
   app.patch(

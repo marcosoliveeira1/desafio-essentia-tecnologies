@@ -1,3 +1,4 @@
+import { NotFoundError } from '../../shared/errors/not-found.error.js'
 import { TaskEntity } from './task.entity.js'
 import type { CreateTaskInput, ITaskRepository, UpdateTaskInput } from './task.repository.js'
 
@@ -59,5 +60,22 @@ export class InMemoryTaskRepository implements ITaskRepository {
 
   async delete(id: number): Promise<boolean> {
     return this.tasks.delete(id)
+  }
+
+  // R1 two-phase: valida todos antes de mutar (atomicidade no fake).
+  async updatePositions(orderedIds: number[], _userId?: number): Promise<TaskEntity[]> {
+    const missingIds = orderedIds.filter((id) => !this.tasks.has(id))
+    if (missingIds.length > 0) {
+      throw new NotFoundError('Tarefa não encontrada', 'TASK_NOT_FOUND', { missingIds })
+    }
+    const now = new Date()
+    const result: TaskEntity[] = []
+    for (let index = 0; index < orderedIds.length; index++) {
+      const current = this.tasks.get(orderedIds[index]) as TaskEntity
+      const next = Object.assign(new TaskEntity(), { ...current, position: index, updatedAt: now })
+      this.tasks.set(next.id, next)
+      result.push(next)
+    }
+    return result
   }
 }

@@ -180,4 +180,55 @@ describe('TaskService (unit, repo in-memory)', () => {
       code: 'VALIDATION_ERROR',
     })
   })
+
+  it('reorder aplica nova ordem com positions 0,1,2', async () => {
+    const a = await service.create({ title: 'a' })
+    const b = await service.create({ title: 'b' })
+    const c = await service.create({ title: 'c' })
+    const result = await service.reorder([c.id, a.id, b.id])
+    expect(result.map((t) => t.id)).toEqual([c.id, a.id, b.id])
+    expect(result.map((t) => t.position)).toEqual([0, 1, 2])
+  })
+
+  it('reorder parcial: não-listadas mantêm position', async () => {
+    const a = await service.create({ title: 'a' })
+    const b = await service.create({ title: 'b' })
+    const c = await service.create({ title: 'c' })
+    await service.reorder([c.id, a.id])
+    const kept = await service.getById(b.id)
+    expect(kept.position).toBe(2)
+    const list = await service.list()
+    expect(list.map((t) => t.id)).toEqual([c.id, a.id, b.id])
+  })
+
+  it('reorder com id inexistente → 404 TASK_NOT_FOUND com missingIds', async () => {
+    const a = await service.create({ title: 'a' })
+    await expect(service.reorder([a.id, 9999])).rejects.toMatchObject({
+      statusCode: 404,
+      code: 'TASK_NOT_FOUND',
+      details: { missingIds: [9999] },
+    })
+  })
+
+  it('reorder rejeita duplicado/vazio/<1/não-inteiro (400)', async () => {
+    const a = await service.create({ title: 'a' })
+    const b = await service.create({ title: 'b' })
+    await expect(service.reorder([a.id, a.id])).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
+    await expect(service.reorder([])).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
+    await expect(service.reorder([0])).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
+    await expect(service.reorder([-1])).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
+    await expect(service.reorder([1.5])).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
+    await expect(service.reorder(['x' as unknown as number])).rejects.toMatchObject({
+      code: 'VALIDATION_ERROR',
+    })
+    void b
+  })
+
+  it('reorder é atômico: falha não muta positions', async () => {
+    const a = await service.create({ title: 'a' })
+    const b = await service.create({ title: 'b' })
+    await expect(service.reorder([b.id, 9999])).rejects.toMatchObject({ code: 'TASK_NOT_FOUND' })
+    expect((await service.getById(a.id)).position).toBe(1)
+    expect((await service.getById(b.id)).position).toBe(2)
+  })
 })

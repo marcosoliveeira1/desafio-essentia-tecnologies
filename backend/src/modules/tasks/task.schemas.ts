@@ -54,3 +54,13 @@ export const taskParamsSchema = Type.Object(
 export type CreateTaskBody = Static<typeof createTaskBodySchema>
 export type UpdateTaskBody = Static<typeof updateTaskBodySchema>
 export type TaskParams = Static<typeof taskParamsSchema>
+
+// R1: reorder — body {ids: int[]} com minItems 1, uniqueItems, minimum 1.
+export const reorderTasksBodySchema = Type.Object(
+  {
+    ids: Type.Array(Type.Integer({ minimum: 1 }), { minItems: 1, uniqueItems: true }),
+  },
+  { additionalProperties: false },
+)
+
+export type ReorderTasksBody = Static<typeof reorderTasksBodySchema>
