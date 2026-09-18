@@ -5,12 +5,14 @@ export interface CreateTaskInput {
   title: string
   description?: string | null
   completed?: boolean
+  position?: number
 }
 
 export interface UpdateTaskInput {
   title?: string
   description?: string | null
   completed?: boolean
+  position?: number
 }
 
 // PORTA (DIP): o service depende só desta interface.
@@ -22,4 +24,5 @@ export interface ITaskRepository {
   create(data: CreateTaskInput, userId?: number): Promise<TaskEntity>
   update(id: number, data: UpdateTaskInput, userId?: number): Promise<TaskEntity | null>
   delete(id: number, userId?: number): Promise<boolean>
+  getMaxPosition(userId?: number): Promise<number>
 }

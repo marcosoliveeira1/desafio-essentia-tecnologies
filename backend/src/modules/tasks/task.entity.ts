@@ -16,6 +16,9 @@ export class TaskEntity {
   @Column('boolean', { nullable: false, default: false })
   completed!: boolean
 
+  @Column('int', { nullable: false, default: 0 })
+  position!: number
+
   @CreateDateColumn({ type: 'timestamp', nullable: false })
   createdAt!: Date
 

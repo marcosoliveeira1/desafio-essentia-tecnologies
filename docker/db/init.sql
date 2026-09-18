@@ -8,3 +8,9 @@ CREATE DATABASE IF NOT EXISTS `todo_dev`
 
 CREATE DATABASE IF NOT EXISTS `todo_test`
   CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- MYSQL_USER (todo) ganha GRANT só no MYSQL_DATABASE (todo_dev);
+-- sem isto o e2e não acessa o banco de teste após recriar o volume.
+GRANT ALL PRIVILEGES ON `todo_dev`.* TO 'todo'@'%';
+GRANT ALL PRIVILEGES ON `todo_test`.* TO 'todo'@'%';
+FLUSH PRIVILEGES;

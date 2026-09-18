@@ -84,7 +84,7 @@ describe('tasks CRUD (e2e happy paths)', () => {
     expect(res.json()).toMatchObject({ code: 'TASK_NOT_FOUND' })
   })
 
-  it('lista em ordem decrescente de criação', async () => {
+  it('lista em ordem crescente de position', async () => {
     for (const title of ['primeira', 'segunda', 'terceira']) {
       const res = await app.inject({ method: 'POST', url: '/api/tasks', payload: { title } })
       expect(res.statusCode).toBe(201)
@@ -92,7 +92,27 @@ describe('tasks CRUD (e2e happy paths)', () => {
     const res = await app.inject({ method: 'GET', url: '/api/tasks' })
     expect(res.statusCode).toBe(200)
     const titles = (res.json() as Array<{ title: string }>).map((t) => t.title)
-    expect(titles).toEqual(['terceira', 'segunda', 'primeira'])
+    expect(titles).toEqual(['primeira', 'segunda', 'terceira'])
+  })
+
+  it('reorder via PATCH {position} reflete no GET em position asc', async () => {
+    const ids: number[] = []
+    for (const title of ['primeira', 'segunda', 'terceira']) {
+      const res = await app.inject({ method: 'POST', url: '/api/tasks', payload: { title } })
+      expect(res.statusCode).toBe(201)
+      ids.push((res.json() as { id: number }).id)
+    }
+    const patched = await app.inject({
+      method: 'PATCH',
+      url: `/api/tasks/${ids[2]}`,
+      payload: { position: 0 },
+    })
+    expect(patched.statusCode).toBe(200)
+    expect((patched.json() as { position: number }).position).toBe(0)
+    const res = await app.inject({ method: 'GET', url: '/api/tasks' })
+    expect(res.statusCode).toBe(200)
+    const titles = (res.json() as Array<{ title: string }>).map((t) => t.title)
+    expect(titles).toEqual(['terceira', 'primeira', 'segunda'])
   })
 })
 
@@ -192,6 +212,20 @@ describe('tasks validation and error edge cases (e2e)', () => {
         ...(method === 'PATCH' ? { payload: { title: 'x' } } : {}),
       })
       expect(res.statusCode).toBe(400)
+    }
+  })
+
+  it('PATCH com position inválido → 400 (position -1, "x", 1.5)', async () => {
+    const created = await app.inject({ method: 'POST', url: '/api/tasks', payload: { title: 'x' } })
+    const id = (created.json() as { id: number }).id
+    for (const position of [-1, 'x', 1.5]) {
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/api/tasks/${id}`,
+        payload: { position },
+      })
+      expect(res.statusCode).toBe(400)
+      expect((res.json() as { code: string }).code).toBe('VALIDATION_ERROR')
     }
   })
 

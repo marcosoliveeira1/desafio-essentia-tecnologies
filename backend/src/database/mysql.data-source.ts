@@ -3,6 +3,7 @@ import { DataSource } from 'typeorm'
 import { TaskEntity } from '../modules/tasks/task.entity.js'
 import { env, type DbConfig } from '../env.js'
 import { CreateTasksTable1789683319101 } from './migrations/1789683319101-CreateTasksTable.js'
+import { AddPositionToTasks1789683319200 } from './migrations/1789683319200-AddPositionToTasks.js'
 
 // F8: `migrationsRun: true` — schema versionado roda no boot, zero passo manual.
 // Entidades/migrations entram nas próximas tasks (T4...).
@@ -16,7 +17,7 @@ export function createMysqlDataSource(config?: DbConfig): DataSource {
     password: db.password,
     database: db.database,
     entities: [TaskEntity],
-    migrations: [CreateTasksTable1789683319101],
+    migrations: [CreateTasksTable1789683319101, AddPositionToTasks1789683319200],
     migrationsRun: true,
     synchronize: false,
     logging: false,

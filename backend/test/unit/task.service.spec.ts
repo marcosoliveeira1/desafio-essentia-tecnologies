@@ -120,11 +120,64 @@ describe('TaskService (unit, repo in-memory)', () => {
     await expect(service.remove(777)).rejects.toMatchObject({ code: 'TASK_NOT_FOUND' })
   })
 
-  it('list retorna em ordem decrescente de criação', async () => {
+  it('list retorna em ordem crescente de position (desempate por id)', async () => {
     const a = await service.create({ title: 'a' })
     const b = await service.create({ title: 'b' })
     const c = await service.create({ title: 'c' })
     const list = await service.list()
-    expect(list.map((t) => t.id)).toEqual([c.id, b.id, a.id])
+    expect(list.map((t) => t.id)).toEqual([a.id, b.id, c.id])
+    expect(list.map((t) => t.position)).toEqual([1, 2, 3])
+  })
+
+  it('create recebe max+1 global', async () => {
+    const a = await service.create({ title: 'a' })
+    const b = await service.create({ title: 'b' })
+    expect(a.position).toBe(1)
+    expect(b.position).toBe(2)
+    await service.remove(a.id)
+    const c = await service.create({ title: 'c' })
+    expect(c.position).toBe(3)
+  })
+
+  it('create ignora position enviado pelo cliente', async () => {
+    const task = await service.create({ title: 'x', position: 99 })
+    expect(task.position).toBe(1)
+    const other = await service.create({ title: 'y', position: 0 })
+    expect(other.position).toBe(2)
+  })
+
+  it('list em position asc após PATCH de position', async () => {
+    const a = await service.create({ title: 'a' })
+    const b = await service.create({ title: 'b' })
+    const c = await service.create({ title: 'c' })
+    await service.update(c.id, { position: 0 })
+    const list = await service.list()
+    expect(list.map((t) => t.id)).toEqual([c.id, a.id, b.id])
+  })
+
+  it('PATCH position reordena a lista', async () => {
+    const a = await service.create({ title: 'a' })
+    const b = await service.create({ title: 'b' })
+    await service.update(b.id, { position: 0 })
+    const list = await service.list()
+    expect(list.map((t) => t.id)).toEqual([b.id, a.id])
+    expect(list[0].position).toBe(0)
+  })
+
+  it('update rejeita position negativo (400)', async () => {
+    const created = await service.create({ title: 'x' })
+    await expect(service.update(created.id, { position: -1 })).rejects.toMatchObject({
+      code: 'VALIDATION_ERROR',
+    })
+  })
+
+  it('update rejeita position não-inteiro (400)', async () => {
+    const created = await service.create({ title: 'x' })
+    await expect(service.update(created.id, { position: 1.5 })).rejects.toMatchObject({
+      code: 'VALIDATION_ERROR',
+    })
+    await expect(service.update(created.id, { position: 'x' as unknown as number })).rejects.toMatchObject({
+      code: 'VALIDATION_ERROR',
+    })
   })
 })

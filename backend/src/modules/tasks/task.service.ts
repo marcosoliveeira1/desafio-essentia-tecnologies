@@ -8,7 +8,7 @@ import type { CreateTaskInput, ITaskRepository, UpdateTaskInput } from './task.r
 export class TaskService {
   constructor(private readonly repo: ITaskRepository) {}
 
-  // Ordem decrescente de criação (o repositório garante).
+  // Ordem crescente de position (o repositório garante; desempate por id).
   list(): Promise<TaskEntity[]> {
     return this.repo.findAll()
   }
@@ -26,7 +26,9 @@ export class TaskService {
     const title = this.normalizeTitle(input?.title)
     const description = this.normalizeDescription(input?.description)
     // `completed` sempre nasce false, mesmo que o cliente envie true.
-    return this.repo.create({ title, description, completed: false })
+    // `position` é sempre MAX+1 GLOBAL (input do cliente ignorado).
+    const maxPosition = await this.repo.getMaxPosition()
+    return this.repo.create({ title, description, completed: false, position: maxPosition + 1 })
   }
 
   async update(id: number, patch: UpdateTaskInput): Promise<TaskEntity> {
@@ -46,6 +48,14 @@ export class TaskService {
         throw new ValidationError('Dados inválidos', [{ field: 'completed', message: 'deve ser booleano' }])
       }
       data.completed = patch.completed
+    }
+    if (patch.position !== undefined) {
+      if (!Number.isInteger(patch.position) || (patch.position as number) < 0) {
+        throw new ValidationError('Dados inválidos', [
+          { field: 'position', message: 'deve ser um inteiro maior ou igual a 0' },
+        ])
+      }
+      data.position = patch.position
     }
     const existing = await this.repo.findById(id)
     if (existing === null) {

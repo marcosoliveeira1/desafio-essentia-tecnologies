@@ -12,7 +12,7 @@ export class TypeOrmTaskRepository implements ITaskRepository {
   }
 
   findAll(): Promise<TaskEntity[]> {
-    return this.orm.find({ order: { id: 'DESC' } })
+    return this.orm.find({ order: { position: 'ASC', id: 'ASC' } })
   }
 
   findById(id: number): Promise<TaskEntity | null> {
@@ -24,6 +24,7 @@ export class TypeOrmTaskRepository implements ITaskRepository {
       title: data.title,
       description: data.description ?? null,
       completed: false,
+      position: data.position ?? 0,
     })
     return this.orm.save(task)
   }
@@ -42,7 +43,19 @@ export class TypeOrmTaskRepository implements ITaskRepository {
     if (data.completed !== undefined) {
       current.completed = data.completed
     }
+    if (data.position !== undefined) {
+      current.position = data.position
+    }
     return this.orm.save(current)
+  }
+
+  async getMaxPosition(): Promise<number> {
+    const result = await this.orm
+      .createQueryBuilder('task')
+      .select('MAX(task.position)', 'max')
+      .getRawOne<{ max: string | number | null }>()
+    const max = result?.max === null || result?.max === undefined ? 0 : Number(result.max)
+    return Number.isNaN(max) ? 0 : max
   }
 
   async delete(id: number): Promise<boolean> {

@@ -32,6 +32,7 @@ export const updateTaskBodySchema = Type.Object(
     title: Type.Optional(titleSchema),
     description: Type.Optional(descriptionSchema),
     completed: Type.Optional(Type.Boolean()),
+    position: Type.Optional(Type.Integer({ minimum: 0 })),
   },
   {
     // PATCH vazio → 400 direto na validação HTTP (o service também barra).
