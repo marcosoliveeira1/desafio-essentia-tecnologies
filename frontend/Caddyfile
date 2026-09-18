@@ -1,0 +1,17 @@
+:80 {
+	root * /srv
+	file_server
+
+	handle /api/* {
+		reverse_proxy backend:3000
+	}
+
+	handle /health {
+		reverse_proxy backend:3000
+	}
+
+	handle {
+		try_files {path} /index.html
+		file_server
+	}
+}

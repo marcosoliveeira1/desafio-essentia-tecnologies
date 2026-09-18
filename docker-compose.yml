@@ -39,6 +39,48 @@ services:
       retries: 20
       start_period: 20s
 
+  # T25: backend prod-like (build local, sem publicar 3000 no host por default).
+  backend:
+    build: ./backend
+    container_name: techx-backend
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      NODE_ENV: production
+      APP_HOST: 0.0.0.0
+      APP_PORT: 3000
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USERNAME: todo
+      DB_PASSWORD: todo
+      DB_DATABASE: todo_dev
+      MONGO_URL: mongodb://mongo:27017/todo_activity
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET ausente — exporte JWT_SECRET com 32+ chars antes do up}
+      JWT_EXPIRES_IN: 12h
+    depends_on:
+      mysql:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 30s
+
+  # T25: frontend prod-like (Caddy servindo SPA + proxy /api/* e /health p/ backend).
+  frontend:
+    build: ./frontend
+    container_name: techx-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
 volumes:
   mysql_data:
   mongo_data:
