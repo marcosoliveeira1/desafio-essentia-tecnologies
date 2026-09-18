@@ -1,5 +1,8 @@
+import bcrypt from 'bcryptjs'
 import type { FastifyInstance } from 'fastify'
 import type { DataSource } from 'typeorm'
+import { AuthService } from './modules/auth/auth.service.js'
+import { registerAuthRoutes } from './modules/auth/auth.controller.js'
 import { registerTaskRoutes } from './modules/tasks/task.controller.js'
 import type { TaskService } from './modules/tasks/task.service.js'
 import { TaskService as TaskServiceImpl } from './modules/tasks/task.service.js'
@@ -20,12 +23,29 @@ export function createUserRepository(db: DataSource): IUserRepository {
   return new TypeOrmUserRepository(db)
 }
 
-export function registerModules(
-  app: FastifyInstance,
+// T17: factory do AuthService — portas reais (bcryptjs + sign do @fastify/jwt).
+// `signToken` chega do app (p/ testes, qualquer função serve).
+export function createAuthService(
   db: DataSource,
-  overrides?: { taskService?: TaskService },
-): TaskService {
+  signToken: (payload: { sub: number }) => string | Promise<string>,
+): AuthService {
+  return new AuthService(createUserRepository(db), {
+    hash: (password: string) => bcrypt.hash(password, 10),
+    compare: (password: string, passwordHash: string) => bcrypt.compare(password, passwordHash),
+    signToken,
+  })
+}
+
+export interface ModuleOverrides {
+  taskService?: TaskService
+  authService?: AuthService
+}
+
+export function registerModules(app: FastifyInstance, db: DataSource, overrides?: ModuleOverrides): TaskService {
   const taskService = overrides?.taskService ?? createTaskService(db)
+  // signToken via app.jwt.sign — o plugin @fastify/jwt É registrado no buildApp ANTES daqui.
+  const authService = overrides?.authService ?? createAuthService(db, (payload) => app.jwt.sign(payload))
   registerTaskRoutes(app, taskService)
+  registerAuthRoutes(app, authService)
   return taskService
 }
