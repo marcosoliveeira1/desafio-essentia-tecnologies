@@ -10,6 +10,8 @@ import { TypeOrmTaskRepository } from './modules/tasks/typeorm-task.repository.j
 
 import { TypeOrmUserRepository } from './modules/auth/typeorm-user.repository.js'
 import type { IUserRepository } from './modules/auth/user.repository.js'
+import type { IActivityRepository } from './modules/activity/activity.repository.js'
+import { MongoActivityRepository } from './modules/activity/mongo-activity.repository.js'
 
 // COMPOSITION ROOT (DIP): cria implementações concretas e injeta nos services/controllers.
 // `overrides` existe p/ testes (ex.: service fake que simula 500 no e2e de edge).
@@ -34,6 +36,13 @@ export function createAuthService(
     compare: (password: string, passwordHash: string) => bcrypt.compare(password, passwordHash),
     signToken,
   })
+}
+
+// T21: factory do repository de atividades (MongoDB, extra Fase 6).
+// NÃO injetar no TaskService aqui (T22) e NÃO registrar rotas (T22:
+// history.controller). Só a factory, no mesmo padrão das demais.
+export function createActivityRepository(mongo: DataSource): IActivityRepository {
+  return new MongoActivityRepository(mongo)
 }
 
 export interface ModuleOverrides {

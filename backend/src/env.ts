@@ -8,6 +8,7 @@ export interface AppEnv {
   db: DbConfig
   dbTest: DbConfig
   auth: AuthConfig
+  mongo: MongoConfig
 }
 
 export interface DbConfig {
@@ -54,6 +55,17 @@ function dbConfig(prefix: '' | 'TEST_'): DbConfig {
   }
 }
 
+// T21: config Mongo (extra Fase 6 — histórico de atividades). SEM fail-fast duro:
+// ausente cai no fallback local e o boot segue (mongo fora só degrada o histórico,
+// ver main.ts). NÃO renomear sem atualizar o .env.example junto.
+export interface MongoConfig {
+  url: string
+}
+
+function mongoConfig(): MongoConfig {
+  return { url: process.env.MONGO_URL ?? 'mongodb://localhost:27017/todo_activity' }
+}
+
 function authConfig(nodeEnv: string): AuthConfig {
   const fallback = nodeEnv === 'production' ? undefined : 'dev-only-insecure-secret-min-32-chars!!'
   const raw = process.env.JWT_SECRET ?? fallback
@@ -75,6 +87,7 @@ export function loadEnv(): AppEnv {
     db: dbConfig(''),
     dbTest: dbConfig('TEST_'),
     auth: authConfig(nodeEnv),
+    mongo: mongoConfig(),
   }
 }
 

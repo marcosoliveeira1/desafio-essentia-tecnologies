@@ -22,5 +22,23 @@ services:
       retries: 20
       start_period: 20s
 
+  # T21: histórico de atividades (extra Fase 6). Nome do serviço `mongo`
+  # (T25 usa esse nome no MONGO_URL do backend).
+  mongo:
+    image: mongo:7
+    container_name: techx-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval 'db.runCommand({ ping: 1 })'"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+
 volumes:
   mysql_data:
+  mongo_data:
