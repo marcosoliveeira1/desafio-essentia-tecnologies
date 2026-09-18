@@ -1,0 +1,7 @@
+article[draggable='true'] {
+	cursor: grab;
+}
+
+article[draggable='true']:active {
+	cursor: grabbing;
+}

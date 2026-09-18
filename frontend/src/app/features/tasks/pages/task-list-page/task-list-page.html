@@ -1,0 +1,163 @@
+<div class="flex min-h-screen flex-col bg-mist font-sans text-gray-700">
+	<header
+		class="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3"
+	>
+		<div class="flex items-center space-x-2">
+			<span class="text-lg font-bold text-navy">Essentia Tasks</span>
+		</div>
+		<div class="relative flex-1 sm:flex-none">
+			<input
+				type="text"
+				placeholder="Buscar..."
+				[value]="store.search()"
+				(input)="onSearch($event)"
+				class="w-full rounded-full bg-gray-100 py-1.5 pr-4 pl-9 text-sm focus:ring-2 focus:ring-gold focus:outline-none sm:w-64"
+			/>
+			<svg
+				class="absolute top-2.5 left-3 h-4 w-4 text-gray-400"
+				fill="none"
+				stroke="currentColor"
+				viewBox="0 0 24 24"
+			>
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="2"
+					d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+				></path>
+			</svg>
+		</div>
+	</header>
+
+	<div class="flex flex-1">
+		<aside
+			class="hidden w-64 flex-col justify-between border-r border-gray-200 bg-white p-4 md:flex"
+		>
+			<div class="space-y-6">
+				<div class="space-y-1">
+					<span
+						class="flex items-center justify-between rounded-lg bg-warm px-3 py-2 text-sm font-medium text-navy"
+					>
+						<span class="flex items-center gap-2">Tarefas</span>
+						<span class="rounded-full bg-gold px-2 py-0.5 text-xs text-navy">{{
+							store.totalCount()
+						}}</span>
+					</span>
+					<span
+						class="flex items-center rounded-lg px-3 py-2 text-sm font-medium text-gray-500"
+						>Atividades</span
+					>
+				</div>
+			</div>
+			<div
+				class="flex items-center space-x-3 border-t border-gray-100 pt-4"
+			>
+				<div
+					class="flex h-9 w-9 items-center justify-center rounded-full bg-gold text-sm font-bold text-navy"
+				>
+					—
+				</div>
+				<div class="min-w-0">
+					<p class="truncate text-sm leading-none font-semibold text-gray-800">—</p>
+					<p class="mt-1 truncate text-xs text-gray-400">—</p>
+				</div>
+			</div>
+		</aside>
+
+		<main class="flex-1 overflow-x-auto p-4 sm:p-6">
+			<div
+				class="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
+			>
+				<div>
+					<h1 class="text-xl font-bold text-gray-800">Minhas tarefas</h1>
+				</div>
+				<button
+					type="button"
+					(click)="openCreate(false)"
+					class="flex items-center space-x-1 rounded-full bg-navy px-4 py-1.5 text-sm font-medium text-white shadow-brand hover:bg-navy-dark"
+				>
+					<span>+</span> <span>Criar tarefa</span>
+				</button>
+			</div>
+
+			<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+				<section
+					class="min-h-[200px] rounded-xl bg-gray-50/50 p-4"
+					[class.drop-hint]="dragOver() === 'todo'"
+					(dragover)="onColumnDragOver($event, 'todo')"
+					(dragleave)="onColumnDragLeave()"
+					(drop)="onColumnDrop($event, false)"
+				>
+					<div class="mb-4 flex items-center justify-between">
+						<h2 class="text-sm font-semibold text-gray-700">
+							A fazer ({{ store.pendingCount() }})
+						</h2>
+						<button
+							type="button"
+							data-completed="false"
+							(click)="openCreate(false)"
+							class="font-bold text-gray-400 hover:text-gray-600"
+						>
+							+
+						</button>
+					</div>
+					<div class="space-y-3">
+						@for (task of todo(); track task.id) {
+							<app-task-item
+								[task]="task"
+								(toggle)="onToggle(task.id)"
+								(edit)="onEdit(task.id)"
+								(delete)="askDelete(task)"
+							/>
+						}
+					</div>
+				</section>
+
+				<section
+					class="min-h-[200px] rounded-xl bg-gray-50/50 p-4"
+					[class.drop-hint]="dragOver() === 'done'"
+					(dragover)="onColumnDragOver($event, 'done')"
+					(dragleave)="onColumnDragLeave()"
+					(drop)="onColumnDrop($event, true)"
+				>
+					<div class="mb-4 flex items-center justify-between">
+						<h2 class="text-sm font-semibold text-gray-700">
+							Concluídas ({{ store.doneCount() }})
+						</h2>
+						<button
+							type="button"
+							data-completed="true"
+							(click)="openCreate(true)"
+							class="font-bold text-gray-400 hover:text-gray-600"
+						>
+							+
+						</button>
+					</div>
+					<div class="space-y-3">
+						@for (task of done(); track task.id) {
+							<app-task-item
+								[task]="task"
+								(toggle)="onToggle(task.id)"
+								(edit)="onEdit(task.id)"
+								(delete)="askDelete(task)"
+							/>
+						}
+					</div>
+				</section>
+			</div>
+
+			@if (pendingCreate() !== null) {
+				<!-- task-form T13 (create, completed preset = pendingCreate) -->
+			}
+			@if (editingId() !== null) {
+				<!-- task-form T14 (edit, id = editingId) -->
+			}
+			<app-confirm-dialog
+				[open]="pendingDelete() !== null"
+				[taskTitle]="pendingDelete()?.title ?? null"
+				(confirmed)="confirmDelete()"
+				(cancelled)="cancelDelete()"
+			/>
+		</main>
+	</div>
+</div>
