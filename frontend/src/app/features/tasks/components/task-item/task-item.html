@@ -1,13 +1,19 @@
 <article
-	draggable="true"
+	[attr.draggable]="dragEnabled()"
 	(dragstart)="onDragStart($event)"
+	(dragend)="onDragEnd()"
 	class="space-y-2 rounded-xl border border-gray-100 bg-white p-4 shadow-sm"
 	[class.opacity-80]="task().completed"
 >
 	<div class="flex items-start gap-2">
 		<span
 			title="Arrastar para reordenar"
-			class="mt-0.5 shrink-0 cursor-grab text-gray-300 hover:text-gray-500"
+			(mousedown)="enableDrag()"
+			(mouseup)="disableDrag()"
+			(mouseleave)="disableDrag()"
+			(touchstart)="enableDrag()"
+			(touchend)="disableDrag()"
+			class="mt-0.5 shrink-0 cursor-grab touch-none text-gray-300 hover:text-gray-500 active:cursor-grabbing"
 		>
 			<svg
 				class="h-4 w-4"
