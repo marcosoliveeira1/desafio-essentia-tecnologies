@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: todo_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install backend deps
+        run: npm ci --prefix backend
+
+      - name: Install frontend deps
+        run: npm ci --prefix frontend
+
+      - name: Prepare test database
+        run: mysql -h127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS todo_test"
+
+      # Lint (Biome) fora do CI por ora: o repo nunca foi lint-clean
+      # (biome 2.x aponta 89 diagnósticos pré-existentes em arquivos de todas
+      # as tasks; corrigi-los é escopo próprio). Roda local: npx biome check .
+
+      - name: Backend unit tests
+        run: npm test --prefix backend
+
+      - name: Backend build
+        run: npm run build --prefix backend
+
+      - name: Frontend tests
+        run: npm test --prefix frontend -- --watch=false
+
+      - name: Frontend build
+        run: npm run build --prefix frontend
+
+      - name: Backend e2e tests
+        env:
+          DB_TEST_HOST: 127.0.0.1
+          DB_TEST_PORT: 3306
+          DB_TEST_USERNAME: root
+          DB_TEST_PASSWORD: root
+          DB_TEST_DATABASE: todo_test
+          MONGO_TEST_URL: mongodb://127.0.0.1:27017/todo_activity_test
+        run: npm run test:e2e --prefix backend
+
+  # deploy:
+  #   Placeholder: deploy fora de escopo neste momento.
+  #   runs-on: ubuntu-latest
+  #   needs: verify
+  #   if: github.ref == 'refs/heads/main'
+  #   steps:
+  #     - run: echo "deploy fora de escopo"

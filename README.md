@@ -1,4 +1,5 @@
 # Task Manager TechX
+[![CI](https://github.com/SEU_USUARIO/desafio-essentia-tecnologies/actions/workflows/ci.yml/badge.svg)](https://github.com/SEU_USUARIO/desafio-essentia-tecnologies/actions/workflows/ci.yml)
 
 App web de gerenciamento de tarefas (to-do list) para os funcionários da TechX organizarem o dia a dia.
 
