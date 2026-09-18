@@ -1,4 +1,9 @@
-<dialog #dialog class="w-96 max-w-[90vw] rounded-2xl p-0 shadow-xl">
+<dialog
+	#dialog
+	(click)="onBackdropClick($event)"
+	(cancel)="onCancel()"
+	class="m-auto w-96 max-w-[90vw] rounded-2xl p-0 shadow-xl"
+>
 	<form
 		[formGroup]="form"
 		(ngSubmit)="onSubmit()"

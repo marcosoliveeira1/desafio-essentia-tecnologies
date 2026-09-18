@@ -83,6 +83,13 @@ export class TaskForm {
 		})
 	}
 
+	protected onBackdropClick(event: MouseEvent): void {
+		const native = this.dialog()?.nativeElement
+		if (native && event.target === native) {
+			this.onCancel()
+		}
+	}
+
 	protected onCancel(): void {
 		this.submitting.set(false)
 		this.cancelled.emit()
