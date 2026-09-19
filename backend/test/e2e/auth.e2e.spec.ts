@@ -220,4 +220,29 @@ describe('auth register/login (e2e)', () => {
 		expect(res.statusCode).toBe(400)
 		expect(res.json()).toMatchObject({ code: 'VALIDATION_ERROR' })
 	})
+
+	it('2 registers simultâneos com mesmo email → {201, 409 EMAIL_CONFLICT}, nunca 500', async () => {
+		const email = `race-${crypto.randomUUID()}@essentia.com`
+		const payload = {
+			name: 'Ada',
+			email,
+			password: 'segredo12',
+		}
+		const settled = await Promise.allSettled([
+			app.inject({ method: 'POST', url: '/api/auth/register', payload }),
+			app.inject({ method: 'POST', url: '/api/auth/register', payload }),
+		])
+		const responses = settled.map((result) => {
+			expect(result.status).toBe('fulfilled')
+			return (
+				result as PromiseFulfilledResult<Awaited<ReturnType<typeof app.inject>>>
+			).value
+		})
+		const statuses = responses
+			.map((res) => res.statusCode)
+			.sort((a, b) => a - b)
+		expect(statuses).toEqual([201, 409])
+		const conflict = responses.find((res) => res.statusCode === 409)
+		expect(conflict?.json()).toMatchObject({ code: 'EMAIL_CONFLICT' })
+	})
 })
