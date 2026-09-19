@@ -19,6 +19,7 @@ import type { Task } from '../../../../core/models/task.model'
 })
 export class TaskItem {
 	readonly task = input.required<Task>()
+	readonly pending = input(false)
 	readonly toggle = output<void>()
 	readonly edit = output<void>()
 	readonly delete = output<void>()

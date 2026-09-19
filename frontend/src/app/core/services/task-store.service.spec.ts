@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing'
-import { of, throwError } from 'rxjs'
+import { of, Subject, throwError } from 'rxjs'
 import { vi } from 'vitest'
 import type { Task } from '../models/task.model'
 import { TaskApiService } from './task-api.service'
@@ -276,5 +276,168 @@ describe('TaskStoreService', () => {
 
 		store.clearError()
 		expect(store.error()).toBeNull()
+	})
+
+	it('toggle otimista: inverte de imediato, usa pending sem loading', () => {
+		store.tasks.set([makeTask({ completed: false, id: 1 })])
+		const gate = new Subject<Task>()
+		spyObj.update.mockReturnValue(gate.asObservable())
+
+		store.toggle(1)
+
+		expect(store.tasks()[0].completed).toBe(true)
+		expect(store.loading()).toBe(false)
+		expect(store.isPending('toggle:1')).toBe(true)
+
+		const confirmed = makeTask({ completed: true, id: 1 })
+		gate.next(confirmed)
+		gate.complete()
+
+		expect(store.tasks()).toEqual([confirmed])
+		expect(store.isPending('toggle:1')).toBe(false)
+		expect(store.loading()).toBe(false)
+	})
+
+	it('toggle falha: rollback para snapshot, MSG_TOGGLE e limpa pending', () => {
+		const before = [makeTask({ completed: false, id: 1 })]
+		store.tasks.set(before)
+		const gate = new Subject<Task>()
+		spyObj.update.mockReturnValue(gate.asObservable())
+
+		store.toggle(1)
+		expect(store.tasks()[0].completed).toBe(true)
+
+		gate.error(new Error('fail'))
+
+		expect(store.tasks()).toEqual(before)
+		expect(store.error()).toBe(
+			'Não foi possível alterar o status da tarefa. Tente novamente.',
+		)
+		expect(store.isPending('toggle:1')).toBe(false)
+		expect(store.loading()).toBe(false)
+	})
+
+	it('double load: último payload vence (ordem 1→2)', () => {
+		const first = new Subject<Task[]>()
+		const second = new Subject<Task[]>()
+		spyObj.list.mockReturnValueOnce(first.asObservable())
+		spyObj.list.mockReturnValueOnce(second.asObservable())
+		const payload1 = [makeTask({ id: 1 })]
+		const payload2 = [makeTask({ id: 2 })]
+
+		store.load()
+		store.load()
+
+		first.next(payload1)
+		second.next(payload2)
+
+		expect(store.tasks()).toEqual(payload2)
+		expect(store.loading()).toBe(false)
+	})
+
+	it('double load: último payload vence (ordem 2→1)', () => {
+		const first = new Subject<Task[]>()
+		const second = new Subject<Task[]>()
+		spyObj.list.mockReturnValueOnce(first.asObservable())
+		spyObj.list.mockReturnValueOnce(second.asObservable())
+		const payload1 = [makeTask({ id: 1 })]
+		const payload2 = [makeTask({ id: 2 })]
+
+		store.load()
+		store.load()
+
+		second.next(payload2)
+		first.next(payload1)
+
+		expect(store.tasks()).toEqual(payload2)
+		expect(store.loading()).toBe(false)
+	})
+
+	it('toggle/reorder em voo não aciona skeleton (loading false)', () => {
+		store.tasks.set([makeTask({ id: 1 }), makeTask({ id: 2 })])
+		const toggleGate = new Subject<Task>()
+		spyObj.update.mockReturnValue(toggleGate.asObservable())
+
+		store.toggle(1)
+
+		expect(store.pending().size).toBeGreaterThan(0)
+		expect(store.loading()).toBe(false)
+		toggleGate.next(makeTask({ completed: true, id: 1 }))
+		toggleGate.complete()
+
+		const reorderGate = new Subject<Task[]>()
+		spyObj.reorder.mockReturnValue(reorderGate.asObservable())
+		store.reorder([2, 1])
+
+		expect(store.isPending('reorder')).toBe(true)
+		expect(store.loading()).toBe(false)
+		reorderGate.next([makeTask({ id: 2 }), makeTask({ id: 1 })])
+		reorderGate.complete()
+		expect(store.isPending('reorder')).toBe(false)
+		expect(store.loading()).toBe(false)
+	})
+
+	it('move reutiliza a chave toggle:<id>', () => {
+		store.tasks.set([makeTask({ completed: false, id: 1 })])
+		const gate = new Subject<Task>()
+		spyObj.update.mockReturnValue(gate.asObservable())
+
+		store.move(1, true)
+
+		expect(store.tasks()[0].completed).toBe(true)
+		expect(store.isPending('toggle:1')).toBe(true)
+		expect(store.loading()).toBe(false)
+
+		gate.next(makeTask({ completed: true, id: 1 }))
+		gate.complete()
+
+		expect(store.isPending('toggle:1')).toBe(false)
+		expect(store.tasks()).toEqual([makeTask({ completed: true, id: 1 })])
+	})
+
+	it('add/update/remove usam pending keys sem loading', () => {
+		const createGate = new Subject<Task>()
+		spyObj.create.mockReturnValue(createGate.asObservable())
+		store.add({ title: 'Nova' })
+		expect(store.isPending('create')).toBe(true)
+		expect(store.loading()).toBe(false)
+		createGate.next(makeTask({ id: 9, title: 'Nova' }))
+		createGate.complete()
+		expect(store.isPending('create')).toBe(false)
+		expect(store.loading()).toBe(false)
+
+		store.tasks.set([makeTask({ id: 1, title: 'Antigo' })])
+		const updateGate = new Subject<Task>()
+		spyObj.update.mockReturnValue(updateGate.asObservable())
+		store.update(1, { title: 'Novo' })
+		expect(store.isPending('update:1')).toBe(true)
+		expect(store.loading()).toBe(false)
+		updateGate.next(makeTask({ id: 1, title: 'Novo' }))
+		updateGate.complete()
+		expect(store.isPending('update:1')).toBe(false)
+
+		const removeGate = new Subject<void>()
+		spyObj.remove.mockReturnValue(removeGate.asObservable())
+		store.remove(1)
+		expect(store.isPending('delete:1')).toBe(true)
+		expect(store.loading()).toBe(false)
+		removeGate.next(undefined)
+		removeGate.complete()
+		expect(store.isPending('delete:1')).toBe(false)
+		expect(store.loading()).toBe(false)
+	})
+
+	it('clear limpa pending (logout)', () => {
+		const gate = new Subject<Task>()
+		spyObj.update.mockReturnValue(gate.asObservable())
+		store.tasks.set([makeTask({ id: 1 })])
+		store.toggle(1)
+		expect(store.pending().size).toBeGreaterThan(0)
+
+		store.clear()
+
+		expect(store.pending().size).toBe(0)
+		expect(store.tasks()).toEqual([])
+		gate.next(makeTask({ completed: true, id: 1 }))
 	})
 })

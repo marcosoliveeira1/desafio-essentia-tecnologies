@@ -20,6 +20,7 @@
 		@for (task of tasks(); track task.id) {
 			<app-task-item
 				[task]="task"
+				[pending]="pendingKeys().has('toggle:' + task.id)"
 				[class.drop-before]="
 					dropHint()?.targetId === task.id && dropHint()?.before === true
 				"

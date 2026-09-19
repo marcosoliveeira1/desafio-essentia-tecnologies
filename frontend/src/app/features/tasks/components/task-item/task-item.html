@@ -1,5 +1,6 @@
 <article
 	[attr.draggable]="dragEnabled()"
+	[attr.aria-busy]="pending()"
 	(dragstart)="onDragStart($event)"
 	(dragend)="onDragEnd()"
 	(dragover)="onItemDragOver($event)"
@@ -11,6 +12,7 @@
 		<button
 			type="button"
 			(click)="toggle.emit()"
+			[disabled]="pending()"
 			[title]="task().completed ? 'Reabrir tarefa' : 'Concluir tarefa'"
 			[attr.aria-pressed]="task().completed"
 			[attr.aria-label]="task().completed ? 'Reabrir tarefa' : 'Concluir tarefa'"
@@ -45,6 +47,14 @@
 		>
 			{{ task().title }}
 		</h3>
+		@if (pending()) {
+			<span
+				role="status"
+				aria-label="Atualizando tarefa"
+				class="mt-0.5 shrink-0 text-xs text-gray-400"
+				>…</span
+			>
+		}
 		<span
 			title="Arrastar para reordenar"
 			(mousedown)="enableDrag()"

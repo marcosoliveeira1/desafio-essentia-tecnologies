@@ -19,10 +19,29 @@ export class TaskStoreService {
 
 	readonly tasks = signal<Task[]>([])
 	readonly loading = signal(false)
+	readonly pending = signal<Set<string>>(new Set())
 	readonly error = signal<string | null>(null)
 	readonly filter = signal<TaskFilter>('all')
 	readonly search = signal('')
 	readonly sort = signal<TaskSort>('manual')
+
+	private loadSeq = 0
+
+	private setPending(key: string): void {
+		this.pending.update((current) => new Set(current).add(key))
+	}
+
+	private clearPending(key: string): void {
+		this.pending.update((current) => {
+			const next = new Set(current)
+			next.delete(key)
+			return next
+		})
+	}
+
+	isPending(key: string): boolean {
+		return this.pending().has(key)
+	}
 
 	readonly filteredTasks = computed(() => {
 		const current = this.tasks()
@@ -66,14 +85,17 @@ export class TaskStoreService {
 	)
 
 	load(): void {
+		const seq = ++this.loadSeq
 		this.loading.set(true)
 		this.error.set(null)
 		this.api.list().subscribe({
 			error: () => {
+				if (seq !== this.loadSeq) return
 				this.error.set(MSG_LOAD)
 				this.loading.set(false)
 			},
 			next: (tasks) => {
+				if (seq !== this.loadSeq) return
 				this.tasks.set(tasks)
 				this.loading.set(false)
 			},
@@ -81,33 +103,35 @@ export class TaskStoreService {
 	}
 
 	add(dto: CreateTaskDto): void {
-		this.loading.set(true)
+		const key = 'create'
+		this.setPending(key)
 		this.error.set(null)
 		this.api.create(dto).subscribe({
 			error: () => {
 				this.error.set(MSG_ADD)
-				this.loading.set(false)
+				this.clearPending(key)
 			},
 			next: (created) => {
 				this.tasks.update((current) => [created, ...current])
-				this.loading.set(false)
+				this.clearPending(key)
 			},
 		})
 	}
 
 	update(id: number, patch: UpdateTaskDto): void {
-		this.loading.set(true)
+		const key = `update:${id}`
+		this.setPending(key)
 		this.error.set(null)
 		this.api.update(id, patch).subscribe({
 			error: () => {
 				this.error.set(MSG_UPDATE)
-				this.loading.set(false)
+				this.clearPending(key)
 			},
 			next: (updated) => {
 				this.tasks.update((current) =>
 					current.map((task) => (task.id === id ? updated : task)),
 				)
-				this.loading.set(false)
+				this.clearPending(key)
 			},
 		})
 	}
@@ -115,33 +139,45 @@ export class TaskStoreService {
 	toggle(id: number): void {
 		const current = this.tasks().find((task) => task.id === id)
 		if (!current) return
-		this.loading.set(true)
+		// move()/drag reuses the same `toggle:<id>` key — single per-item indicator.
+		const key = `toggle:${id}`
+		const snapshot = current
 		this.error.set(null)
-		this.api.update(id, { completed: !current.completed }).subscribe({
+		this.setPending(key)
+		this.tasks.update((all) =>
+			all.map((task) =>
+				task.id === id ? { ...task, completed: !task.completed } : task,
+			),
+		)
+		this.api.update(id, { completed: !snapshot.completed }).subscribe({
 			error: () => {
+				this.tasks.update((all) =>
+					all.map((task) => (task.id === id ? snapshot : task)),
+				)
 				this.error.set(MSG_TOGGLE)
-				this.loading.set(false)
+				this.clearPending(key)
 			},
 			next: (updated) => {
 				this.tasks.update((all) =>
 					all.map((task) => (task.id === id ? updated : task)),
 				)
-				this.loading.set(false)
+				this.clearPending(key)
 			},
 		})
 	}
 
 	remove(id: number): void {
-		this.loading.set(true)
+		const key = `delete:${id}`
+		this.setPending(key)
 		this.error.set(null)
 		this.api.remove(id).subscribe({
 			error: () => {
 				this.error.set(MSG_REMOVE)
-				this.loading.set(false)
+				this.clearPending(key)
 			},
 			next: () => {
 				this.tasks.update((current) => current.filter((task) => task.id !== id))
-				this.loading.set(false)
+				this.clearPending(key)
 			},
 		})
 	}
@@ -159,18 +195,29 @@ export class TaskStoreService {
 		const current = this.tasks().find((task) => task.id === id)
 		if (!current) return
 		if (current.completed === toCompleted) return
-		this.loading.set(true)
+		// Reuses the `toggle:<id>` key shared with toggle() — one per-item indicator.
+		const key = `toggle:${id}`
+		const snapshot = current
 		this.error.set(null)
+		this.setPending(key)
+		this.tasks.update((all) =>
+			all.map((task) =>
+				task.id === id ? { ...task, completed: toCompleted } : task,
+			),
+		)
 		this.api.update(id, { completed: toCompleted }).subscribe({
 			error: () => {
+				this.tasks.update((all) =>
+					all.map((task) => (task.id === id ? snapshot : task)),
+				)
 				this.error.set(MSG_TOGGLE)
-				this.loading.set(false)
+				this.clearPending(key)
 			},
 			next: (updated) => {
 				this.tasks.update((all) =>
 					all.map((task) => (task.id === id ? updated : task)),
 				)
-				this.loading.set(false)
+				this.clearPending(key)
 			},
 		})
 	}
@@ -183,16 +230,17 @@ export class TaskStoreService {
 	 */
 	reorder(ids: number[]): void {
 		if (ids.length === 0) return
-		this.loading.set(true)
+		const key = 'reorder'
+		this.setPending(key)
 		this.error.set(null)
 		this.api.reorder(ids).subscribe({
 			error: () => {
 				this.error.set(MSG_REORDER)
-				this.loading.set(false)
+				this.clearPending(key)
 			},
 			next: (tasks) => {
 				this.tasks.set(tasks)
-				this.loading.set(false)
+				this.clearPending(key)
 			},
 		})
 	}
@@ -216,5 +264,6 @@ export class TaskStoreService {
 	clear(): void {
 		this.tasks.set([])
 		this.error.set(null)
+		this.pending.set(new Set())
 	}
 }

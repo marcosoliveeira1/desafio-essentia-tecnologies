@@ -21,6 +21,7 @@ export class KanbanColumn {
 	readonly emptyText = input.required<string>()
 	readonly dragActive = input(false)
 	readonly dropHint = input<{ targetId: number; before: boolean } | null>(null)
+	readonly pendingKeys = input<Set<string>>(new Set())
 
 	readonly columnDragOver = output<DragEvent>()
 	readonly columnDragLeave = output<void>()
