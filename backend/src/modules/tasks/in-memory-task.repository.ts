@@ -30,12 +30,13 @@ export class InMemoryTaskRepository implements ITaskRepository {
 
 	async create(data: CreateTaskInput, userId?: number): Promise<TaskEntity> {
 		const now = new Date()
+		const position = data.position ?? (await this.getMaxPosition(userId)) + 1
 		const task = Object.assign(new TaskEntity(), {
 			id: this.seq++,
 			title: data.title,
 			description: data.description ?? null,
 			completed: false,
-			position: data.position ?? 0,
+			position,
 			userId: userId ?? null,
 			createdAt: now,
 			updatedAt: now,

@@ -1,18 +1,18 @@
 import { type Static, Type } from '@sinclair/typebox'
+import { DESCRIPTION_MAX, TITLE_MAX } from '../../shared/constants/limits.js'
 
 const titleSchema = Type.String({
 	minLength: 1,
-	maxLength: 255,
+	maxLength: TITLE_MAX,
 	pattern: '^(?!\\s*$).+$',
-	description:
-		'Título da tarefa (1..255 chars após trim; whitespace-only rejeitado)',
+	description: `Título da tarefa (1..${TITLE_MAX} chars após trim; whitespace-only rejeitado)`,
 	examples: ['Estudar Fastify'],
 })
 
 const descriptionSchema = Type.Union(
-	[Type.String({ maxLength: 2000 }), Type.Null()],
+	[Type.String({ maxLength: DESCRIPTION_MAX }), Type.Null()],
 	{
-		description: 'Descrição opcional (máx 2000 chars)',
+		description: `Descrição opcional (máx ${DESCRIPTION_MAX} chars)`,
 		examples: ['Ler a documentação oficial do plugin'],
 	},
 )

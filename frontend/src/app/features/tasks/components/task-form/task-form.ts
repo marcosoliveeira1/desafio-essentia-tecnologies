@@ -17,7 +17,12 @@ import {
 	ReactiveFormsModule,
 	Validators,
 } from '@angular/forms'
-import type { CreateTaskDto, Task } from '../../../../core/models/task.model'
+import {
+	type CreateTaskDto,
+	DESCRIPTION_MAX,
+	type Task,
+	TITLE_MAX,
+} from '../../../../core/models/task.model'
 import { TaskStoreService } from '../../../../core/services/task-store.service'
 
 function noWhitespaceValidator(
@@ -46,16 +51,19 @@ export class TaskForm {
 	protected readonly submitting = signal(false)
 	protected readonly isEditing = computed(() => this.task() !== null)
 
+	protected readonly titleMax = TITLE_MAX
+	protected readonly descriptionMax = DESCRIPTION_MAX
+
 	readonly form = new FormGroup({
 		description: new FormControl('', {
 			nonNullable: true,
-			validators: [Validators.maxLength(2000)],
+			validators: [Validators.maxLength(DESCRIPTION_MAX)],
 		}),
 		title: new FormControl('', {
 			nonNullable: true,
 			validators: [
 				Validators.required,
-				Validators.maxLength(255),
+				Validators.maxLength(TITLE_MAX),
 				noWhitespaceValidator,
 			],
 		}),

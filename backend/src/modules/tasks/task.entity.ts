@@ -5,13 +5,14 @@ import {
 	PrimaryGeneratedColumn,
 	UpdateDateColumn,
 } from 'typeorm'
+import { TITLE_MAX } from '../../shared/constants/limits.js'
 
 @Entity('tasks')
 export class TaskEntity {
 	@PrimaryGeneratedColumn('increment', { type: 'int' })
 	id!: number
 
-	@Column('varchar', { length: 255, nullable: false })
+	@Column('varchar', { length: TITLE_MAX, nullable: false })
 	title!: string
 
 	@Column('text', { nullable: true })

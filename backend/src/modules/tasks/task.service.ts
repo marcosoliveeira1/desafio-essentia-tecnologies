@@ -1,3 +1,4 @@
+import { DESCRIPTION_MAX, TITLE_MAX } from '../../shared/constants/limits.js'
 import { NotFoundError } from '../../shared/errors/not-found.error.js'
 import { ValidationError } from '../../shared/errors/validation.error.js'
 import type { IActivityRepository } from '../activity/activity.repository.js'
@@ -31,9 +32,8 @@ export class TaskService {
 	async create(userId: number, input: CreateTaskInput): Promise<TaskEntity> {
 		const title = this.normalizeTitle(input?.title)
 		const description = this.normalizeDescription(input?.description)
-		const maxPosition = await this.repo.getMaxPosition(userId)
 		const created = await this.repo.create(
-			{ title, description, completed: false, position: maxPosition + 1 },
+			{ title, description, completed: false },
 			userId,
 		)
 		await this.record({ taskId: created.id, userId, action: 'created' })
@@ -177,9 +177,12 @@ export class TaskService {
 				{ field: 'title', message: 'título não pode ser vazio' },
 			])
 		}
-		if (title.length > 255) {
+		if (title.length > TITLE_MAX) {
 			throw new ValidationError('Dados inválidos', [
-				{ field: 'title', message: 'título deve ter no máximo 255 caracteres' },
+				{
+					field: 'title',
+					message: `título deve ter no máximo ${TITLE_MAX} caracteres`,
+				},
 			])
 		}
 		return title
@@ -194,11 +197,11 @@ export class TaskService {
 				{ field: 'description', message: 'deve ser texto' },
 			])
 		}
-		if (value.length > 2000) {
+		if (value.length > DESCRIPTION_MAX) {
 			throw new ValidationError('Dados inválidos', [
 				{
 					field: 'description',
-					message: 'descrição deve ter no máximo 2000 caracteres',
+					message: `descrição deve ter no máximo ${DESCRIPTION_MAX} caracteres`,
 				},
 			])
 		}
