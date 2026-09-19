@@ -1,5 +1,4 @@
 import bcrypt from 'bcryptjs'
-import type { FastifyInstance } from 'fastify'
 import type { DataSource } from 'typeorm'
 import type { IActivityRepository } from './modules/activity/activity.repository.js'
 import { registerHistoryRoutes } from './modules/activity/history.controller.js'
@@ -12,6 +11,7 @@ import { registerTaskRoutes } from './modules/tasks/task.controller.js'
 import type { TaskService } from './modules/tasks/task.service.js'
 import { TaskService as TaskServiceImpl } from './modules/tasks/task.service.js'
 import { TypeOrmTaskRepository } from './modules/tasks/typeorm-task.repository.js'
+import type { AppInstance } from './shared/http/app-instance.js'
 
 export function createTaskService(
 	db: DataSource,
@@ -52,7 +52,7 @@ export interface ModuleOverrides {
 }
 
 export function registerModules(
-	app: FastifyInstance,
+	app: AppInstance,
 	db: DataSource,
 	overrides?: ModuleOverrides,
 	activityRepository?: IActivityRepository,

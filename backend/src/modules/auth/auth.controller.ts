@@ -1,6 +1,5 @@
-import type { FastifyInstance } from 'fastify'
 import { env } from '../../env.js'
-import type { LoginBody, RegisterBody } from './auth.schemas.js'
+import type { AppInstance } from '../../shared/http/app-instance.js'
 import { loginBodySchema, registerBodySchema } from './auth.schemas.js'
 import type { AuthService } from './auth.service.js'
 
@@ -10,7 +9,7 @@ const rateLimitConfig = {
 }
 
 export function registerAuthRoutes(
-	app: FastifyInstance,
+	app: AppInstance,
 	service: AuthService,
 ): void {
 	app.post(
@@ -20,7 +19,7 @@ export function registerAuthRoutes(
 			schema: { body: registerBodySchema },
 		},
 		async (request, reply) => {
-			const user = await service.register(request.body as RegisterBody)
+			const user = await service.register(request.body)
 			return reply.status(201).send(user)
 		},
 	)
@@ -32,7 +31,7 @@ export function registerAuthRoutes(
 			schema: { body: loginBodySchema },
 		},
 		async (request) => {
-			return service.login(request.body as LoginBody)
+			return service.login(request.body)
 		},
 	)
 }

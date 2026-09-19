@@ -29,5 +29,3 @@ export async function ensureActivityIndexes(mongo: DataSource): Promise<void> {
 		{ name: 'idx_task_activity_user_occurred' },
 	)
 }
-
-export const mongoDataSource = createMongoDataSource()

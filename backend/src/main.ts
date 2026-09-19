@@ -45,14 +45,23 @@ async function main(): Promise<void> {
 			: undefined,
 	})
 
+	const GRACE_MS = 10_000
 	const shutdown = async (signal: string): Promise<void> => {
-		app.log.info({ signal }, 'encerrando servidor')
-		await app.close()
-		if (db.isInitialized) {
-			await db.destroy()
-		}
-		if (mongo.isInitialized) {
-			await mongo.destroy()
+		const force = setTimeout(() => {
+			app.log.error(
+				{ signal },
+				'shutdown excedeu grace period — forçando saída',
+			)
+			process.exit(1)
+		}, GRACE_MS)
+		force.unref()
+		try {
+			app.log.info({ signal }, 'encerrando servidor')
+			await app.close()
+			if (db.isInitialized) await db.destroy()
+			if (mongo.isInitialized) await mongo.destroy()
+		} finally {
+			clearTimeout(force)
 		}
 	}
 	process.on('SIGTERM', () => void shutdown('SIGTERM'))

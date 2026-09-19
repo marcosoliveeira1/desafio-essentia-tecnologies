@@ -1,10 +1,6 @@
-import type { FastifyInstance } from 'fastify'
+import type { AppInstance } from '../../shared/http/app-instance.js'
 import { requireAuth } from '../../shared/plugins/auth-guard.plugin.js'
-import type {
-	CreateTaskBody,
-	ReorderTasksBody,
-	UpdateTaskBody,
-} from './task.schemas.js'
+import { currentUserId } from '../../shared/plugins/current-user.js'
 import {
 	createTaskBodySchema,
 	reorderTasksBodySchema,
@@ -13,12 +9,8 @@ import {
 } from './task.schemas.js'
 import type { TaskService } from './task.service.js'
 
-function currentUserId(request: { user?: unknown }): number {
-	return (request.user as { sub: number }).sub
-}
-
 export function registerTaskRoutes(
-	app: FastifyInstance,
+	app: AppInstance,
 	service: TaskService,
 ): void {
 	app.get('/api/tasks', { preHandler: [requireAuth] }, async (request) =>
@@ -29,7 +21,7 @@ export function registerTaskRoutes(
 		'/api/tasks/:id',
 		{ preHandler: [requireAuth], schema: { params: taskParamsSchema } },
 		async (request) => {
-			const { id } = request.params as { id: string }
+			const { id } = request.params
 			return service.getById(currentUserId(request), Number(id))
 		},
 	)
@@ -38,10 +30,7 @@ export function registerTaskRoutes(
 		'/api/tasks',
 		{ preHandler: [requireAuth], schema: { body: createTaskBodySchema } },
 		async (request, reply) => {
-			const task = await service.create(
-				currentUserId(request),
-				request.body as CreateTaskBody,
-			)
+			const task = await service.create(currentUserId(request), request.body)
 			return reply.status(201).send(task)
 		},
 	)
@@ -50,7 +39,7 @@ export function registerTaskRoutes(
 		'/api/tasks/reorder',
 		{ preHandler: [requireAuth], schema: { body: reorderTasksBodySchema } },
 		async (request) => {
-			const { ids } = request.body as ReorderTasksBody
+			const { ids } = request.body
 			return service.reorder(currentUserId(request), ids)
 		},
 	)
@@ -62,12 +51,8 @@ export function registerTaskRoutes(
 			schema: { params: taskParamsSchema, body: updateTaskBodySchema },
 		},
 		async (request) => {
-			const { id } = request.params as { id: string }
-			return service.update(
-				currentUserId(request),
-				Number(id),
-				request.body as UpdateTaskBody,
-			)
+			const { id } = request.params
+			return service.update(currentUserId(request), Number(id), request.body)
 		},
 	)
 
@@ -75,7 +60,7 @@ export function registerTaskRoutes(
 		'/api/tasks/:id',
 		{ preHandler: [requireAuth], schema: { params: taskParamsSchema } },
 		async (request, reply) => {
-			const { id } = request.params as { id: string }
+			const { id } = request.params
 			await service.remove(currentUserId(request), Number(id))
 			return reply.status(204).send()
 		},

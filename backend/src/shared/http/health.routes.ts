@@ -1,10 +1,7 @@
-import type { FastifyInstance } from 'fastify'
 import type { DataSource } from 'typeorm'
+import type { AppInstance } from './app-instance.js'
 
-export function registerHealthRoutes(
-	app: FastifyInstance,
-	db: DataSource,
-): void {
+export function registerHealthRoutes(app: AppInstance, db: DataSource): void {
 	app.get('/health', async (_request, reply) => {
 		try {
 			await db.query('SELECT 1')

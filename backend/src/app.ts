@@ -4,14 +4,13 @@ import jwt from '@fastify/jwt'
 import rateLimit from '@fastify/rate-limit'
 import swagger from '@fastify/swagger'
 import swaggerUi from '@fastify/swagger-ui'
-import Fastify, {
-	type FastifyContextConfig,
-	type FastifyInstance,
-} from 'fastify'
+import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox'
+import Fastify, { type FastifyContextConfig } from 'fastify'
 import type { DataSource } from 'typeorm'
 import { type ModuleOverrides, registerModules } from './container.js'
 import { env } from './env.js'
 import type { IActivityRepository } from './modules/activity/activity.repository.js'
+import type { AppInstance } from './shared/http/app-instance.js'
 import { registerErrorHandler } from './shared/http/error-handler.js'
 import { registerHealthRoutes } from './shared/http/health.routes.js'
 
@@ -29,7 +28,7 @@ export async function buildApp({
 	authService,
 	jwtSecret,
 	activityRepository,
-}: BuildAppOptions): Promise<FastifyInstance> {
+}: BuildAppOptions): Promise<AppInstance> {
 	const app = Fastify({
 		logger: true,
 		ajv: { customOptions: { coerceTypes: false, removeAdditional: false } },
@@ -37,7 +36,7 @@ export async function buildApp({
 		// X-Forwarded-For, então o bucket do rate-limit é por IP real do cliente
 		// (spec hardening-03, PR-03). Diretos sem proxy: ip = socket.
 		trustProxy: true,
-	})
+	}).withTypeProvider<TypeBoxTypeProvider>()
 	// CSP ativa globalmente (PR-04). Isenção SÓ da superfície /api/docs: helmet
 	// v13 suporta opções por rota via config.helmet — merged sobre a global
 	// (contentSecurityPolicy:false remove apenas a CSP; demais headers ficam).

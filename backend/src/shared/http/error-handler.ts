@@ -1,5 +1,6 @@
-import type { FastifyError, FastifyInstance } from 'fastify'
+import type { FastifyError } from 'fastify'
 import { AppError } from '../errors/app-error.js'
+import type { AppInstance } from './app-instance.js'
 
 interface ErrorBody {
 	code: string
@@ -7,7 +8,7 @@ interface ErrorBody {
 	details?: unknown
 }
 
-export function registerErrorHandler(app: FastifyInstance): void {
+export function registerErrorHandler(app: AppInstance): void {
 	app.setErrorHandler(
 		(rawError: FastifyError | AppError | Error, _request, reply) => {
 			const maybeFastify = rawError as FastifyError

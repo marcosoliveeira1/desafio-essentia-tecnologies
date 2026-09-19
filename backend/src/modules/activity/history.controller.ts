@@ -1,13 +1,10 @@
-import type { FastifyInstance } from 'fastify'
+import type { AppInstance } from '../../shared/http/app-instance.js'
 import { requireAuth } from '../../shared/plugins/auth-guard.plugin.js'
+import { currentUserId } from '../../shared/plugins/current-user.js'
 import { taskParamsSchema } from '../tasks/task.schemas.js'
 import type { TaskService } from '../tasks/task.service.js'
 import type { IActivityRepository } from './activity.repository.js'
 import type { ActivityLogEntity } from './activity-log.entity.js'
-
-function currentUserId(request: { user?: unknown }): number {
-	return (request.user as { sub: number }).sub
-}
 
 function toHistoryDto(log: ActivityLogEntity): {
 	id: string
@@ -28,7 +25,7 @@ function toHistoryDto(log: ActivityLogEntity): {
 }
 
 export function registerHistoryRoutes(
-	app: FastifyInstance,
+	app: AppInstance,
 	taskService: TaskService,
 	activity?: IActivityRepository,
 ): void {
@@ -36,7 +33,7 @@ export function registerHistoryRoutes(
 		'/api/tasks/:id/history',
 		{ preHandler: [requireAuth], schema: { params: taskParamsSchema } },
 		async (request) => {
-			const { id } = request.params as { id: string }
+			const { id } = request.params
 			const taskId = Number(id)
 			const userId = currentUserId(request)
 			await taskService.getById(userId, taskId)
