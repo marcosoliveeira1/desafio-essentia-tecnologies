@@ -5,6 +5,7 @@ export interface AppEnv {
 	db: DbConfig
 	dbTest: DbConfig
 	auth: AuthConfig
+	rateLimit: RateLimitConfig
 	mongo: MongoConfig
 }
 
@@ -19,6 +20,12 @@ export interface DbConfig {
 export interface AuthConfig {
 	jwtSecret: string
 	expiresIn: string
+}
+
+export interface RateLimitConfig {
+	max: number
+	windowMs: number
+	allowlist: string[]
 }
 
 function required(name: string, value: string | undefined): string {
@@ -96,6 +103,24 @@ function authConfig(nodeEnv: string): AuthConfig {
 	return { jwtSecret: raw, expiresIn: process.env.JWT_EXPIRES_IN ?? '12h' }
 }
 
+function rateLimitConfig(nodeEnv: string): RateLimitConfig {
+	const raw =
+		process.env.RATE_LIMIT_ALLOWLIST ?? (nodeEnv === 'test' ? '127.0.0.1' : '')
+	const allowlist = raw
+		.split(',')
+		.map((ip) => ip.trim())
+		.filter((ip) => ip !== '')
+	return {
+		max: numberVar('RATE_LIMIT_MAX', process.env.RATE_LIMIT_MAX, 5),
+		windowMs: numberVar(
+			'RATE_LIMIT_WINDOW',
+			process.env.RATE_LIMIT_WINDOW,
+			60_000,
+		),
+		allowlist,
+	}
+}
+
 export function loadEnv(): AppEnv {
 	const nodeEnv = process.env.NODE_ENV ?? 'development'
 	return {
@@ -105,6 +130,7 @@ export function loadEnv(): AppEnv {
 		db: dbConfig(''),
 		dbTest: dbConfig('TEST_'),
 		auth: authConfig(nodeEnv),
+		rateLimit: rateLimitConfig(nodeEnv),
 		mongo: mongoConfig(),
 	}
 }

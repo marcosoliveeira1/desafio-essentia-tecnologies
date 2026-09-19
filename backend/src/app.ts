@@ -1,5 +1,7 @@
 import cors from '@fastify/cors'
+import helmet from '@fastify/helmet'
 import jwt from '@fastify/jwt'
+import rateLimit from '@fastify/rate-limit'
 import swagger from '@fastify/swagger'
 import swaggerUi from '@fastify/swagger-ui'
 import Fastify, { type FastifyInstance } from 'fastify'
@@ -30,6 +32,10 @@ export async function buildApp({
 		ajv: { customOptions: { coerceTypes: false, removeAdditional: false } },
 	})
 	await app.register(cors)
+	// contentSecurityPolicy desligado: a CSP default do helmet quebra o Swagger UI
+	// servido em /api/docs; os demais headers de segurança seguem ativos (spec
+	// hardening-01, edge case de H3).
+	await app.register(helmet, { contentSecurityPolicy: false })
 	await app.register(swagger, {
 		openapi: {
 			info: {
@@ -46,6 +52,12 @@ export async function buildApp({
 	await app.register(jwt, {
 		secret: jwtSecret ?? env.auth.jwtSecret,
 		sign: { expiresIn: env.auth.expiresIn },
+	})
+	await app.register(rateLimit, {
+		global: false,
+		max: env.rateLimit.max,
+		timeWindow: env.rateLimit.windowMs,
+		allowList: env.rateLimit.allowlist,
 	})
 	registerErrorHandler(app)
 	registerHealthRoutes(app, db)

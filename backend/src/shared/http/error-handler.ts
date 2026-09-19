@@ -57,6 +57,15 @@ export function registerErrorHandler(app: FastifyInstance): void {
 				return
 			}
 
+			if (maybeFastify.statusCode === 429) {
+				const body: ErrorBody = {
+					code: 'RATE_LIMITED',
+					message: 'Muitas tentativas. Aguarde um instante e tente novamente.',
+				}
+				void reply.status(429).send(body)
+				return
+			}
+
 			const statusCode =
 				typeof maybeFastify.statusCode === 'number' &&
 				maybeFastify.statusCode >= 400
