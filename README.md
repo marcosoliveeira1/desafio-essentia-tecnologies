@@ -1,6 +1,4 @@
 # Essentia Todo List
-<!-- após o push, trocar SEU_USUARIO pelo usuário GitHub real -->
-[![CI](https://github.com/SEU_USUARIO/desafio-essentia-tecnologies/actions/workflows/ci.yml/badge.svg)](https://github.com/SEU_USUARIO/desafio-essentia-tecnologies/actions/workflows/ci.yml)
 
 App web de gerenciamento de tarefas (to-do list) para os funcionários da Essentia organizarem o dia a dia.
 

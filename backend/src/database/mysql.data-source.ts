@@ -29,5 +29,3 @@ export function createMysqlDataSource(config?: DbConfig): DataSource {
 		logging: false,
 	})
 }
-
-export const mysqlDataSource = createMysqlDataSource()

@@ -1,41 +1,41 @@
 {
-  "$schema": "https://json.schemastore.org/biome.json",
-  "vcs": {
-    "enabled": true,
-    "clientKind": "git",
-    "useIgnoreFile": true
-  },
-  "linter": {
-    "enabled": true,
-    "rules": {
-      "recommended": true
-    }
-  },
-  "overrides": [
-    {
-      "includes": ["frontend/src/**/*.html"],
-      "linter": {
-        "rules": {
-          "a11y": {
-            "useValidAnchor": "off",
-            "noSvgWithoutTitle": "off"
-          }
-        }
-      }
-    }
-  ],
-  "formatter": {
-    "enabled": true
-  },
-  "css": {
-    "parser": {
-      "tailwindDirectives": true
-    }
-  },
-  "javascript": {
-    "formatter": {
-      "quoteStyle": "single",
-      "semicolons": "asNeeded"
-    }
-  }
+	"$schema": "https://json.schemastore.org/biome.json",
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": true
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"recommended": true
+		}
+	},
+	"overrides": [
+		{
+			"includes": ["frontend/src/**/*.html"],
+			"linter": {
+				"rules": {
+					"a11y": {
+						"useValidAnchor": "off",
+						"noSvgWithoutTitle": "off"
+					}
+				}
+			}
+		}
+	],
+	"formatter": {
+		"enabled": true
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
+	},
+	"javascript": {
+		"formatter": {
+			"quoteStyle": "single",
+			"semicolons": "asNeeded"
+		}
+	}
 }

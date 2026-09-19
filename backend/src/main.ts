@@ -14,7 +14,6 @@ async function main(): Promise<void> {
 	try {
 		await runSeed(db)
 	} catch (err) {
-		// eslint-disable-next-line no-console
 		console.warn('[main] seed demo falhou — seguindo sem dados demo:', err)
 	}
 
@@ -22,7 +21,6 @@ async function main(): Promise<void> {
 	try {
 		await mongo.initialize()
 	} catch (err) {
-		// eslint-disable-next-line no-console
 		console.warn(
 			'[main] mongo indisponível — histórico de atividades degradado:',
 			err,
@@ -53,7 +51,6 @@ async function main(): Promise<void> {
 }
 
 void main().catch((err: unknown) => {
-	// eslint-disable-next-line no-console
 	console.error('[main] falha fatal no boot:', err)
 	process.exit(1)
 })

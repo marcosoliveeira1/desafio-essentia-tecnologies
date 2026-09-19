@@ -1,14 +1,14 @@
 {
-  "name": "essentia-todo-list",
-  "version": "0.1.0",
-  "private": true,
-  "description": "Essentia Todo List — monorepo (backend Fastify + frontend Angular + MySQL)",
-  "engines": {
-    "node": ">=22.22.3",
-    "npm": ">=9"
-  },
-  "scripts": {
-    "setup": "npm --prefix backend install && npm --prefix frontend install",
-    "test:compose": "bash scripts/smoke-compose.sh"
-  }
+	"name": "essentia-todo-list",
+	"version": "0.1.0",
+	"private": true,
+	"description": "Essentia Todo List — monorepo (backend Fastify + frontend Angular + MySQL)",
+	"engines": {
+		"node": ">=22.22.3",
+		"npm": ">=9"
+	},
+	"scripts": {
+		"setup": "npm --prefix backend install && npm --prefix frontend install",
+		"test:compose": "bash scripts/smoke-compose.sh"
+	}
 }

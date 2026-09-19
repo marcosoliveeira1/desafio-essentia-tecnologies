@@ -69,19 +69,16 @@ async function ensureDemoUser(db: DataSource): Promise<UserEntity> {
 
 export async function runSeed(db: DataSource): Promise<void> {
 	if (process.env.NODE_ENV === 'production') {
-		// eslint-disable-next-line no-console
 		console.log('[seed] NODE_ENV=production — seed demo ignorado')
 		return
 	}
 
 	const demo = await ensureDemoUser(db)
-	// eslint-disable-next-line no-console
 	console.log(`[seed] usuário demo pronto: ${demo.email} (id=${demo.id})`)
 
 	const repo = new TypeOrmTaskRepository(db)
 	const existing = await repo.findAll()
 	if (existing.length > 0) {
-		// eslint-disable-next-line no-console
 		console.log(`[seed] ${existing.length} tarefa(s) já existem — nada a fazer`)
 		return
 	}
@@ -94,7 +91,6 @@ export async function runSeed(db: DataSource): Promise<void> {
 			await repo.update(created.id, { completed: true }, demo.id)
 		}
 	}
-	// eslint-disable-next-line no-console
 	console.log(
 		`[seed] ${DEMO_TASKS.length} tarefas demo criadas (userId=${demo.id})`,
 	)
@@ -106,7 +102,6 @@ async function main(): Promise<void> {
 	await db.initialize()
 	try {
 		await runSeed(db)
-		// eslint-disable-next-line no-console
 		console.log(`[seed] banco: ${config.db.database}`)
 	} finally {
 		await db.destroy()
@@ -118,7 +113,6 @@ const invokedDirectly =
 	(process.argv[1] ?? '').replace(/\\/g, '/').endsWith('/seed.js')
 if (invokedDirectly) {
 	void main().catch((err: unknown) => {
-		// eslint-disable-next-line no-console
 		console.error('[seed] falha:', err)
 		process.exit(1)
 	})
