@@ -16,7 +16,10 @@ services:
       - mysql_data:/var/lib/mysql
       - ./docker/db:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD}"]
+      # TCP de propósito: o backend conecta via TCP; `mysqladmin -h localhost`
+      # usaria socket Unix e marcaria healthy durante o init (servidor
+      # temporário sem TCP), liberando o backend cedo demais (ECONNREFUSED).
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 --protocol=TCP -u root -p$${MYSQL_ROOT_PASSWORD}"]
       interval: 5s
       timeout: 3s
       retries: 20
