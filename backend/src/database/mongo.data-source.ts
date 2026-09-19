@@ -16,4 +16,18 @@ export function createMongoDataSource(url?: string): DataSource {
 	})
 }
 
+export async function ensureActivityIndexes(mongo: DataSource): Promise<void> {
+	const manager = mongo.mongoManager
+	await manager.createCollectionIndex(
+		ActivityLogEntity,
+		{ taskId: 1, userId: 1, occurredAt: -1 },
+		{ name: 'idx_task_activity_task_user_occurred' },
+	)
+	await manager.createCollectionIndex(
+		ActivityLogEntity,
+		{ userId: 1, occurredAt: -1 },
+		{ name: 'idx_task_activity_user_occurred' },
+	)
+}
+
 export const mongoDataSource = createMongoDataSource()

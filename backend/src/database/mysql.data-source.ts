@@ -7,6 +7,7 @@ import { CreateTasksTable1789683319101 } from './migrations/1789683319101-Create
 import { AddPositionToTasks1789683319200 } from './migrations/1789683319200-AddPositionToTasks.js'
 import { CreateUsersTable1789683319300 } from './migrations/1789683319300-CreateUsersTable.js'
 import { AddUserIdToTasks1789683319400 } from './migrations/1789683319400-AddUserIdToTasks.js'
+import { AddUserPositionIndexToTasks1789683319500 } from './migrations/1789683319500-AddUserPositionIndexToTasks.js'
 
 export function createMysqlDataSource(config?: DbConfig): DataSource {
 	const db: DbConfig = config ?? env.db
@@ -23,6 +24,7 @@ export function createMysqlDataSource(config?: DbConfig): DataSource {
 			AddPositionToTasks1789683319200,
 			CreateUsersTable1789683319300,
 			AddUserIdToTasks1789683319400,
+			AddUserPositionIndexToTasks1789683319500,
 		],
 		migrationsRun: true,
 		synchronize: false,
