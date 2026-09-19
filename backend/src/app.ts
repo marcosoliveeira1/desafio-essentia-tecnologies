@@ -32,14 +32,8 @@ export async function buildApp({
 	const app = Fastify({
 		logger: true,
 		ajv: { customOptions: { coerceTypes: false, removeAdditional: false } },
-		// Caddy é o único proxy em produção: trustProxy faz request.ip vir do
-		// X-Forwarded-For, então o bucket do rate-limit é por IP real do cliente
-		// (spec hardening-03, PR-03). Diretos sem proxy: ip = socket.
 		trustProxy: true,
 	}).withTypeProvider<TypeBoxTypeProvider>()
-	// CSP ativa globalmente (PR-04). Isenção SÓ da superfície /api/docs: helmet
-	// v13 suporta opções por rota via config.helmet — merged sobre a global
-	// (contentSecurityPolicy:false remove apenas a CSP; demais headers ficam).
 	app.addHook('onRoute', (routeOptions) => {
 		if (
 			typeof routeOptions.url === 'string' &&
@@ -52,16 +46,12 @@ export async function buildApp({
 		}
 	})
 	await app.register(helmet)
-	// CORS (PR-05): allowlist explícita via CORS_ORIGINS; unset → dev/test usa
-	// `*`; em production sem allowlist o plugin NÃO é registrado (same-origin
-	// via Caddy).
 	const corsOrigins = env.corsOrigins
 	if (corsOrigins !== undefined) {
 		await app.register(cors, { origin: corsOrigins })
 	} else if (env.nodeEnv !== 'production') {
 		await app.register(cors)
 	}
-	// Swagger opt-in (PR-06): default ligado fora de production; compose de demo força "true"
 	if (env.swaggerEnabled) {
 		await app.register(swagger, {
 			openapi: {

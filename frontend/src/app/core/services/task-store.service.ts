@@ -145,7 +145,6 @@ export class TaskStoreService {
 	toggle(id: number): void {
 		const current = this.tasks().find((task) => task.id === id)
 		if (!current) return
-		// move()/drag reuses the same `toggle:<id>` key — single per-item indicator.
 		const key = `toggle:${id}`
 		const snapshot = current
 		this.error.set(null)
@@ -188,20 +187,10 @@ export class TaskStoreService {
 		})
 	}
 
-	/**
-	 * Move de drag-and-drop entre as colunas do kanban (toggle-only).
-	 *
-	 * - Coluna diferente (`completed` diverge): persiste via
-	 *   `PATCH /api/tasks/:id` com `{ completed }` e substitui o item local
-	 *   pelo retorno da API (erro usa MSG_TOGGLE).
-	 * - Mesma coluna (drop intra-coluna): no-op — reorder fino por índice
-	 *   é feito via `reorder(ids)`, não via `move`.
-	 */
 	move(id: number, toCompleted: boolean): void {
 		const current = this.tasks().find((task) => task.id === id)
 		if (!current) return
 		if (current.completed === toCompleted) return
-		// Reuses the `toggle:<id>` key shared with toggle() — one per-item indicator.
 		const key = `toggle:${id}`
 		const snapshot = current
 		this.error.set(null)
@@ -228,12 +217,6 @@ export class TaskStoreService {
 		})
 	}
 
-	/**
-	 * Reorder fino por ids globais completos.
-	 *
-	 * Persiste via `PATCH /api/tasks/reorder` com `{ ids }` e substitui
-	 * a lista local pelo retorno da API. Guard: lista vazia é no-op.
-	 */
 	reorder(ids: number[]): void {
 		if (ids.length === 0) return
 		const key = 'reorder'

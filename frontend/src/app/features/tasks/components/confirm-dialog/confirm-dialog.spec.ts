@@ -73,7 +73,6 @@ describe('ConfirmDialog', () => {
 	it('Esc nativo emite cancelled ×1', async () => {
 		const { cancelled, confirmed, dialog, fixture } = await openDialog()
 
-		// fails if (close) binding removed (PR-22 regression test)
 		dialog.dispatchEvent(new Event('close'))
 		fixture.detectChanges()
 

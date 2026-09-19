@@ -53,8 +53,6 @@ type HistoryEvent = {
 	occurredAt: string
 }
 
-// O service grava o histórico em fire-and-forget (não bloqueia a resposta):
-// o teste faz polling em vez de assumir que a escrita já aterrissou.
 async function waitForHistory(
 	app: FastifyInstance,
 	headers: Record<string, string>,

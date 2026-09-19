@@ -98,8 +98,6 @@ describe('docs /api/docs em production (e2e)', () => {
 	let app: FastifyInstance | undefined
 	let db: DataSource | undefined
 
-	// Cada cenário importa env.js/app.js com módulos frescos (vi.resetModules)
-	// para que loadEnv() releia o process.env setado pelo teste.
 	const startProdApp = async (): Promise<FastifyInstance> => {
 		vi.resetModules()
 		const [{ env: freshEnv }, { buildApp: freshBuildApp }] = await Promise.all([
@@ -138,7 +136,6 @@ describe('docs /api/docs em production (e2e)', () => {
 	})
 
 	afterAll(() => {
-		// singleFork compartilha o process: restaurar TODA var tocada.
 		process.env = { ...savedEnv }
 		vi.resetModules()
 	})

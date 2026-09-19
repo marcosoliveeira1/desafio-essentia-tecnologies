@@ -5,9 +5,6 @@ describe('env (loadEnv)', () => {
 
 	beforeEach(() => {
 		snapshot = { ...process.env }
-		// Suite hermética: JWT_SECRET é obrigatória em QUALQUER ambiente
-		// (hardening-03, sem fallback) — success-paths não podem depender do
-		// env do processo host (ex.: step de unit tests do CI não a define).
 		process.env.JWT_SECRET = 'unit-env-spec-secret-min-32-chars!!'
 	})
 

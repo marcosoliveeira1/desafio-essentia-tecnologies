@@ -656,7 +656,6 @@ function matchesWhere(
 	return true
 }
 
-// simula o efeito do UPDATE batch CASE WHEN: params = [id, pos, …, (userId?), ids]
 function applyFakeUpdate(
 	rows: TaskEntity[],
 	sql: string,

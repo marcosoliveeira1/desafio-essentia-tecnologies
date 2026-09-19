@@ -94,13 +94,12 @@ export class TypeOrmTaskRepository implements ITaskRepository {
 		userId?: number,
 	): Promise<TaskEntity[]> {
 		if (orderedIds.length === 0) {
-			return [] // serviço já valida vazio; defesa defensiva sem gastar query
+			return []
 		}
 		return this.db.transaction(async (manager) => {
 			const repo = manager.getRepository(TaskEntity)
 			const scope = userId === undefined ? {} : { userId }
 
-			// (1) posse: 1 SELECT id IN (…) — contagem para missingIds
 			const owned = await repo.find({
 				select: { id: true },
 				where: { id: In(orderedIds), ...scope },
@@ -113,7 +112,6 @@ export class TypeOrmTaskRepository implements ITaskRepository {
 				})
 			}
 
-			// (2) 1 UPDATE batch CASE WHEN — 100% parametrizado (placeholders ?)
 			const cases = orderedIds.map(() => 'WHEN ? THEN ?').join(' ')
 			const inPlaceholders = orderedIds.map(() => '?').join(', ')
 			const setParams: number[] = []
@@ -133,7 +131,6 @@ export class TypeOrmTaskRepository implements ITaskRepository {
 				],
 			)
 
-			// (3) 1 SELECT de retorno; ordem do payload reconstruída em memória
 			const rows = await repo.find({ where: { id: In(orderedIds), ...scope } })
 			const byId = new Map(rows.map((t) => [t.id, t]))
 			return orderedIds.map((id) => byId.get(id) as TaskEntity)

@@ -1,7 +1,6 @@
 import type { AbstractControl, ValidationErrors } from '@angular/forms'
 
 export const MIN_PASSWORD_LENGTH = 8
-// bcrypt trunca em 72 bytes; backend valida maxLength 72
 export const MAX_PASSWORD_LENGTH = 72
 
 export function passwordLengthValidator(

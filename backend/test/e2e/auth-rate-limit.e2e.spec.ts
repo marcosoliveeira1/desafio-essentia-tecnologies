@@ -7,9 +7,6 @@ import { env } from '../../src/env.js'
 
 const LIMITED_IP = '203.0.113.10'
 
-// TEST-NET-2: distinto de LIMITED_IP (203.0.113.10, TEST-NET-1) e nunca
-// allowlisted (só 127.0.0.1 no env de teste) — IPs sintéticos únicos por caso
-// evitam poluição de bucket entre testes (spec hardening-03, edge case).
 const XFF_LIMITED_IP = '198.51.100.10'
 const XFF_OTHER_IP = '198.51.100.11'
 
@@ -26,7 +23,7 @@ function loginRequestBehindProxy(forwardedFor: string) {
 	return {
 		method: 'POST' as const,
 		url: '/api/auth/login',
-		remoteAddress: '127.0.0.1', // socket do proxy (Caddy), não do cliente
+		remoteAddress: '127.0.0.1',
 		headers: { 'x-forwarded-for': forwardedFor },
 		payload: { email: 'ninguem@essentia.com', password: 'errada123' },
 	}
