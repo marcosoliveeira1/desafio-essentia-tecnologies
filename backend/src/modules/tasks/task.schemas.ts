@@ -6,12 +6,14 @@ const titleSchema = Type.String({
 	pattern: '^(?!\\s*$).+$',
 	description:
 		'Título da tarefa (1..255 chars após trim; whitespace-only rejeitado)',
+	examples: ['Estudar Fastify'],
 })
 
 const descriptionSchema = Type.Union(
 	[Type.String({ maxLength: 2000 }), Type.Null()],
 	{
 		description: 'Descrição opcional (máx 2000 chars)',
+		examples: ['Ler a documentação oficial do plugin'],
 	},
 )
 
@@ -21,7 +23,16 @@ export const createTaskBodySchema = Type.Object(
 		description: Type.Optional(descriptionSchema),
 		completed: Type.Optional(Type.Boolean()),
 	},
-	{ additionalProperties: false },
+	{
+		additionalProperties: false,
+		description: 'Payload de criação de tarefa',
+		examples: [
+			{
+				title: 'Estudar Fastify',
+				description: 'Ler a documentação oficial do plugin',
+			},
+		],
+	},
 )
 
 export const updateTaskBodySchema = Type.Object(
@@ -34,12 +45,18 @@ export const updateTaskBodySchema = Type.Object(
 	{
 		minProperties: 1,
 		additionalProperties: false,
+		description: 'Payload de atualização parcial (ao menos 1 campo)',
+		examples: [{ completed: true }],
 	},
 )
 
 export const taskParamsSchema = Type.Object(
 	{
-		id: Type.String({ pattern: '^[1-9][0-9]*$' }),
+		id: Type.String({
+			pattern: '^[1-9][0-9]*$',
+			description: 'ID numérico da tarefa',
+			examples: ['1'],
+		}),
 	},
 	{ additionalProperties: false },
 )
@@ -53,9 +70,15 @@ export const reorderTasksBodySchema = Type.Object(
 		ids: Type.Array(Type.Integer({ minimum: 1 }), {
 			minItems: 1,
 			uniqueItems: true,
+			description: 'IDs na nova ordem',
+			examples: [[3, 1, 2]],
 		}),
 	},
-	{ additionalProperties: false },
+	{
+		additionalProperties: false,
+		description: 'Reordenação das tarefas do usuário',
+		examples: [{ ids: [3, 1, 2] }],
+	},
 )
 
 export type ReorderTasksBody = Static<typeof reorderTasksBodySchema>
