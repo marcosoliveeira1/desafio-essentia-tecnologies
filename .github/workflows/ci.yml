@@ -31,12 +31,8 @@ jobs:
         env:
           MONGO_INITDB_ROOT_USERNAME: root
           MONGO_INITDB_ROOT_PASSWORD: root
-          MONGO_APP_USERNAME: todo
-          MONGO_APP_PASSWORD: todo
         ports:
           - 27017:27017
-        volumes:
-          - ${{ github.workspace }}/docker/db:/docker-entrypoint-initdb.d:ro
         options: >-
           --health-cmd="mongosh --quiet --eval 'db.adminCommand({ ping: 1 })'"
           --health-interval=10s
@@ -103,7 +99,7 @@ jobs:
           DB_TEST_USERNAME: root
           DB_TEST_PASSWORD: root
           DB_TEST_DATABASE: todo_test
-          MONGO_TEST_URL: mongodb://todo:todo@127.0.0.1:27017/todo_activity_test?authSource=admin
+          MONGO_TEST_URL: mongodb://root:root@127.0.0.1:27017/todo_activity_test?authSource=admin
           JWT_SECRET: e2e-ci-secret-min-32-chars-123456
         run: npm run test:e2e --prefix backend
 
@@ -129,12 +125,8 @@ jobs:
         env:
           MONGO_INITDB_ROOT_USERNAME: root
           MONGO_INITDB_ROOT_PASSWORD: root
-          MONGO_APP_USERNAME: todo
-          MONGO_APP_PASSWORD: todo
         ports:
           - 27017:27017
-        volumes:
-          - ${{ github.workspace }}/docker/db:/docker-entrypoint-initdb.d:ro
         options: >-
           --health-cmd="mongosh --quiet --eval 'db.adminCommand({ ping: 1 })'"
           --health-interval=10s
