@@ -70,6 +70,20 @@ describe('TaskService (unit, repo in-memory)', () => {
 		expect(task.description).toBeNull()
 	})
 
+	it('cria com description null explícito (normaliza, sem 400)', async () => {
+		const task = await service.create(USER_A, {
+			title: 't',
+			description: null,
+		})
+		expect(task.description).toBeNull()
+	})
+
+	it('create rejeita input não-objeto (400)', async () => {
+		await expect(
+			service.create(USER_A, undefined as unknown as CreateTaskInput),
+		).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
+	})
+
 	it('cria com trim no title', async () => {
 		const task = await service.create(USER_A, { title: '  Comprar pão  ' })
 		expect(task.title).toBe('Comprar pão')
@@ -183,6 +197,13 @@ describe('TaskService (unit, repo in-memory)', () => {
 		await expect(service.update(USER_A, created.id, {})).rejects.toMatchObject({
 			code: 'VALIDATION_ERROR',
 		})
+	})
+
+	it('update rejeita patch não-objeto (string → 400)', async () => {
+		const created = await service.create(USER_A, { title: 'x' })
+		await expect(
+			service.update(USER_A, created.id, 'x' as unknown as UpdateTaskInput),
+		).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
 	})
 
 	it('update rejeita title whitespace-only (400)', async () => {
@@ -517,6 +538,22 @@ describe('TaskService (unit, repo in-memory)', () => {
 			userId: USER_A,
 			action: 'deleted',
 		})
+	})
+
+	it('update só registra completed/uncompleted quando completed muda; position-only não registra', async () => {
+		const activity = new RecordingActivityRepository()
+		service = new TaskService(repo, activity)
+		const created = await service.create(USER_A, { title: 't' })
+		await service.update(USER_A, created.id, { completed: false })
+		expect(activity.calls.map((c) => c.action)).toEqual(['created', 'updated'])
+		await service.update(USER_A, created.id, { position: 0 })
+		expect(activity.calls).toHaveLength(2)
+		await service.update(USER_A, created.id, { title: 'x', position: 1 })
+		expect(activity.calls.map((c) => c.action)).toEqual([
+			'created',
+			'updated',
+			'updated',
+		])
 	})
 
 	it('falha no histórico não derruba a operação (degradado)', async () => {

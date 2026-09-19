@@ -187,7 +187,7 @@ npm run test:compose                     # smoke full docker na raiz (porta 80 l
 | --- | --- | --- |
 | Back unit | `backend/` — `npm test` (`vitest run test/unit`) | **62** passed (task.service + auth.service + schemas + repos) |
 | Back e2e | `backend/` — `npm run test:e2e` (`vitest run test/e2e`) | **49** its (auth, rate-limit, health, docs, history, tasks) — **exige MySQL + Mongo no ar** (`DB_TEST_*`, `MONGO_TEST_URL`; ver `backend/.env.example` e `ci.yml`) |
-| Back mutation | `backend/` — `npm run test:mutation` (Stryker) | Score **~76%** nos services de domínio (`auth.service`, `task.service`), break em 70% |
+| Back mutation | `backend/` — `npm run test:mutation` (Stryker) | Score **75.35%** (auth.service.ts 75.72%, task.service.ts 75.10% — por arquivo, gate 70) — artefato: 2026-09-19 via npm run test:mutation |
 | Front | `frontend/` — `npm test -- --watch=false` | **71** passed |
 | Smoke full docker | raiz — `npm run test:compose` | Sobe `up --build --wait`, valida health/register/login/duplicado/CRUD via Caddy :80 e derruba com `down -v` |
 

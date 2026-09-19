@@ -150,6 +150,25 @@ describe('AuthService (unit, repo in-memory)', () => {
 		).rejects.toMatchObject({ code: 'EMAIL_CONFLICT' })
 	})
 
+	it('register trata cada lado do OU do UNIQUE de forma independente (code ou errno)', async () => {
+		repo.failNextCreateWith = { code: 'ER_DUP_ENTRY', errno: 9999 }
+		await expect(
+			service.register({
+				name: 'Ada',
+				email: 'ada@essentia.com',
+				password: 'segredo12',
+			}),
+		).rejects.toMatchObject({ code: 'EMAIL_CONFLICT' })
+		repo.failNextCreateWith = { code: 'SOMETHING_ELSE', errno: 1062 }
+		await expect(
+			service.register({
+				name: 'Ada',
+				email: 'ada@essentia.com',
+				password: 'segredo12',
+			}),
+		).rejects.toMatchObject({ code: 'EMAIL_CONFLICT' })
+	})
+
 	it('register repropaga erros que não são de UNIQUE (incl. throw null)', async () => {
 		repo.failNextCreateWith = new Error('boom')
 		await expect(
