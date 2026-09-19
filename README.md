@@ -177,6 +177,7 @@ Números verificados em 2026-09-19 (todas as suítes executadas; e2e exige banco
 
 ```bash
 npm test --prefix backend                # unit (sem bancos)
+npm run test:coverage --prefix backend   # unit + gate de cobertura (linhas ≥80, statements ≥80, branches ≥70)
 npm run test:e2e --prefix backend        # e2e de API (com MySQL + Mongo no ar)
 npm run test:mutation --prefix backend   # Stryker (unit only; lento ~ minutos)
 npm test --prefix frontend -- --watch=false     # sem watch (CI usa igual)
@@ -195,11 +196,14 @@ Pré-requisitos por suíte: unit roda sozinho; e2e precisa de `docker compose up
 
 ## CI
 
-Workflow **CI** (`.github/workflows/ci.yml`), dois jobs no `push`/PR para `main`:
+Workflow **CI** (`.github/workflows/ci.yml`), três jobs no `push`/PR para `main` (`permissions: contents: read`):
 
-- **`verify`**: Node via `.nvmrc`, `npm ci` nos 2 apps, então **typecheck (back+front) → lint (back+front, Biome) → audit (back+front, `--audit-level=high`, não-bloqueante) → cria `todo_test` → unit back → build back → testes front → build front → e2e** com MySQL 8 + Mongo 7 como services (`DB_TEST_*`/`MONGO_TEST_URL` apontando para eles).
+- **`verify`**: Node via `.nvmrc`, `npm ci` nos 2 apps, então **typecheck (back+front) → lint (back+front, Biome) → audit (back+front, bloqueante: `npm audit --prefix <app> --omit=dev --audit-level=high`, sem `continue-on-error`) → cria `todo_test` → unit back → gate de cobertura back → build back → testes front → build front → e2e** com MySQL 8 + Mongo 7 como services (`DB_TEST_*`/`MONGO_TEST_URL` apontando para eles).
+- **`mutation`** (após `verify`): `npm ci` do backend + `npm run test:mutation` (Stryker, thresholds high 80 / low 70 / break 70) com os mesmos services MySQL 8 + Mongo 7 do `verify`; o relatório em `backend/reports/mutation/` é publicado como artefato `mutation-report` (`if: always()`). Números por arquivo na tabela de Testes acima (escopo e gates definidos em T11).
 - **`smoke`** (após `verify`): gera um `JWT_SECRET` descartável em `.env` e roda `npm run test:compose` — a stack full via Caddy :80 validada de ponta a ponta.
 - **Deploy fora de escopo** (placeholder comentado no fim do `ci.yml`).
+
+Gates que reprovam o `verify`: typecheck, lint, **audit (alta ou superior, só deps de prod)**, testes (sem `--passWithNoTests` — glob inexistente falha), **cobertura** (provider v8, `src/**/*.ts`, excluídos `src/main.ts`, `src/seed.ts`, `src/container.ts`, `src/database/migrations/**` e `src/**/*.data-source.ts`; `functions` sem gate) e build/e2e.
 
 ## Decisões técnicas
 
