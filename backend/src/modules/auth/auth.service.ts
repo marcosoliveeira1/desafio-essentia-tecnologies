@@ -25,7 +25,11 @@ export interface LoginInput {
 export interface AuthPorts {
 	hash(password: string): Promise<string>
 	compare(password: string, passwordHash: string): Promise<boolean>
-	signToken(payload: { sub: number }): string | Promise<string>
+	signToken(payload: {
+		sub: number
+		name: string
+		email: string
+	}): string | Promise<string>
 }
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -83,7 +87,11 @@ export class AuthService {
 		if (!matches) {
 			throw new UnauthorizedError('Credenciais inválidas')
 		}
-		const token = await this.ports.signToken({ sub: user.id })
+		const token = await this.ports.signToken({
+			sub: user.id,
+			name: user.name,
+			email: user.email,
+		})
 		return { token }
 	}
 

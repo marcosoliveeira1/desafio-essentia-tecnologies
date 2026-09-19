@@ -26,7 +26,11 @@ export function createUserRepository(db: DataSource): IUserRepository {
 
 export function createAuthService(
 	db: DataSource,
-	signToken: (payload: { sub: number }) => string | Promise<string>,
+	signToken: (payload: {
+		sub: number
+		name: string
+		email: string
+	}) => string | Promise<string>,
 ): AuthService {
 	return new AuthService(createUserRepository(db), {
 		hash: (password: string) => bcrypt.hash(password, 10),

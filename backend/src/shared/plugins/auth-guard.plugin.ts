@@ -4,8 +4,8 @@ import { UnauthorizedError } from '../errors/unauthorized.error.js'
 
 declare module '@fastify/jwt' {
 	interface FastifyJWT {
-		payload: { sub: number }
-		user: { sub: number }
+		payload: { sub: number; name: string; email: string }
+		user: { sub: number; name: string; email: string }
 	}
 }
 

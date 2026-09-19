@@ -62,14 +62,16 @@ class InMemoryUserRepository implements IUserRepository {
 	}
 }
 
-function testPorts(): AuthPorts & { signed: Array<{ sub: number }> } {
-	const signed: Array<{ sub: number }> = []
+function testPorts(): AuthPorts & {
+	signed: Array<{ sub: number; name: string; email: string }>
+} {
+	const signed: Array<{ sub: number; name: string; email: string }> = []
 	return {
 		signed,
 		hash: async (password: string) => `hash:${password}`,
 		compare: async (password: string, passwordHash: string) =>
 			passwordHash === `hash:${password}`,
-		signToken: (payload: { sub: number }) => {
+		signToken: (payload: { sub: number; name: string; email: string }) => {
 			signed.push(payload)
 			return `token-for-${payload.sub}`
 		},
@@ -189,7 +191,9 @@ describe('AuthService (unit, repo in-memory)', () => {
 			password: 'segredo12',
 		})
 		expect(result).toEqual({ token: `token-for-${created.id}` })
-		expect(ports.signed).toEqual([{ sub: created.id }])
+		expect(ports.signed).toEqual([
+			{ sub: created.id, name: 'Ada', email: 'ada@essentia.com' },
+		])
 	})
 
 	it('login com email inexistente e com senha errada dão o MESMO 401 genérico', async () => {

@@ -5,15 +5,33 @@ import {
 } from '@angular/common/http/testing'
 import { TestBed } from '@angular/core/testing'
 import { AuthStoreService } from './auth-store.service'
-import { TokenService } from './token.service'
+import { TOKEN_STORAGE_KEY, TokenService } from './token.service'
+
+function encodePayload(payload: unknown): string {
+	return btoa(JSON.stringify(payload))
+		.replace(/\+/g, '-')
+		.replace(/\//g, '_')
+		.replace(/=+$/, '')
+}
 
 function fakeJwt(sub: number): string {
-	const encode = (value: unknown): string =>
-		btoa(JSON.stringify(value))
-			.replace(/\+/g, '-')
-			.replace(/\//g, '_')
-			.replace(/=+$/, '')
-	return `${encode({ alg: 'HS256', typ: 'JWT' })}.${encode({ sub })}.assinatura`
+	return `${encodePayload({ alg: 'HS256', typ: 'JWT' })}.${encodePayload({ sub })}.assinatura`
+}
+
+function fakeSessionJwt(
+	payload: Record<string, unknown> & { sub: number },
+): string {
+	return `${encodePayload({ alg: 'HS256', typ: 'JWT' })}.${encodePayload(payload)}.assinatura`
+}
+
+function injectStoreWithToken(token: string | null): AuthStoreService {
+	localStorage.clear()
+	if (token !== null) localStorage.setItem(TOKEN_STORAGE_KEY, token)
+	TestBed.resetTestingModule()
+	TestBed.configureTestingModule({
+		providers: [provideHttpClient(), provideHttpClientTesting()],
+	})
+	return TestBed.inject(AuthStoreService)
 }
 
 describe('AuthStoreService', () => {
@@ -25,10 +43,10 @@ describe('AuthStoreService', () => {
 		TestBed.configureTestingModule({
 			providers: [provideHttpClient(), provideHttpClientTesting()],
 		})
+		localStorage.clear()
 		store = TestBed.inject(AuthStoreService)
 		httpMock = TestBed.inject(HttpTestingController)
 		tokens = TestBed.inject(TokenService)
-		localStorage.clear()
 	})
 
 	afterEach(() => {
@@ -172,5 +190,85 @@ describe('AuthStoreService', () => {
 		expect(store.user()).toBeNull()
 		expect(store.authState()).toBe('anonymous')
 		expect(store.error()).toBeNull()
+	})
+})
+
+describe('AuthStoreService (hidratação no boot)', () => {
+	let httpMock: HttpTestingController
+
+	beforeEach(() => {
+		TestBed.configureTestingModule({
+			providers: [provideHttpClient(), provideHttpClientTesting()],
+		})
+		httpMock = TestBed.inject(HttpTestingController)
+		localStorage.clear()
+	})
+
+	afterEach(() => {
+		httpMock.verify()
+	})
+
+	it('token válido no boot hidrata o user do payload (sub/name/email)', () => {
+		const exp = Math.floor(Date.now() / 1000) + 3600
+		const token = fakeSessionJwt({
+			sub: 42,
+			name: 'Ada',
+			email: 'ada@essentia.com',
+			exp,
+		})
+
+		const store = injectStoreWithToken(token)
+
+		expect(store.user()).toEqual({
+			id: 42,
+			name: 'Ada',
+			email: 'ada@essentia.com',
+		})
+		expect(store.authState()).toBe('authenticated')
+		expect(localStorage.getItem(TOKEN_STORAGE_KEY)).toBe(token)
+	})
+
+	it('token expirado no boot limpa o token e fica anônimo', () => {
+		const exp = Math.floor(Date.now() / 1000) - 10
+		const token = fakeSessionJwt({
+			sub: 42,
+			name: 'Ada',
+			email: 'ada@essentia.com',
+			exp,
+		})
+
+		const store = injectStoreWithToken(token)
+
+		expect(store.user()).toBeNull()
+		expect(store.authState()).toBe('anonymous')
+		expect(localStorage.getItem(TOKEN_STORAGE_KEY)).toBeNull()
+	})
+
+	it('token sem exp no boot é tratado como sessão inválida (logout local)', () => {
+		const token = fakeSessionJwt({
+			sub: 42,
+			name: 'Ada',
+			email: 'ada@essentia.com',
+		})
+
+		const store = injectStoreWithToken(token)
+
+		expect(store.user()).toBeNull()
+		expect(localStorage.getItem(TOKEN_STORAGE_KEY)).toBeNull()
+	})
+
+	it('token malformado no boot limpa o token e fica anônimo', () => {
+		const store = injectStoreWithToken('nao-e-um-jwt')
+
+		expect(store.user()).toBeNull()
+		expect(store.authState()).toBe('anonymous')
+		expect(localStorage.getItem(TOKEN_STORAGE_KEY)).toBeNull()
+	})
+
+	it('sem token no boot o store inicia anônimo', () => {
+		const store = injectStoreWithToken(null)
+
+		expect(store.user()).toBeNull()
+		expect(store.authState()).toBe('anonymous')
 	})
 })

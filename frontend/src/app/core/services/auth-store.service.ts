@@ -8,6 +8,7 @@ import type {
 	RegisterDto,
 	User,
 } from '../models/auth.model'
+import { decodeJwtPayload, isJwtExpired } from '../utils/jwt'
 import { TokenService } from './token.service'
 
 const MSG_LOGIN_UNAUTHORIZED = 'Email ou senha inválidos.'
@@ -23,21 +24,23 @@ interface RegisterResponse {
 	email: string
 }
 
-function userIdFromToken(token: string): number | null {
-	try {
-		const payload = token.split('.')[1]
-		if (!payload) return null
-		const base64 = payload.replace(/-/g, '+').replace(/_/g, '/')
-		const binary = atob(base64)
-		const bytes = Uint8Array.from(binary, (ch) => ch.charCodeAt(0))
-		const json = new TextDecoder().decode(bytes)
-		const decoded = JSON.parse(json) as { sub?: unknown }
-		const sub =
-			typeof decoded.sub === 'string' ? Number(decoded.sub) : decoded.sub
-		return typeof sub === 'number' && Number.isFinite(sub) ? sub : null
-	} catch {
+function subFromToken(token: string): number | null {
+	const payload = decodeJwtPayload(token)
+	if (payload === null) return null
+	const sub =
+		typeof payload.sub === 'string' ? Number(payload.sub) : payload.sub
+	return typeof sub === 'number' && Number.isFinite(sub) ? sub : null
+}
+
+function userFromToken(token: string): User | null {
+	const payload = decodeJwtPayload(token)
+	if (payload === null || isJwtExpired(payload)) return null
+	if (typeof payload.name !== 'string' || typeof payload.email !== 'string') {
 		return null
 	}
+	const id = subFromToken(token)
+	if (id === null) return null
+	return { id, name: payload.name, email: payload.email }
 }
 
 function displayNameFromEmail(email: string): string {
@@ -102,12 +105,20 @@ export class AuthStoreService {
 	private readonly http = inject(HttpClient)
 	private readonly tokens = inject(TokenService)
 
-	readonly user = signal<User | null>(null)
+	readonly user = signal<User | null>(this.hydratedUser())
 	readonly loading = signal(false)
 	readonly error = signal<string | null>(null)
 	readonly authState = computed<AuthState>(() =>
 		this.user() !== null ? 'authenticated' : 'anonymous',
 	)
+
+	private hydratedUser(): User | null {
+		const token = this.tokens.getToken()
+		if (token === null) return null
+		const user = userFromToken(token)
+		if (user === null) this.tokens.clear()
+		return user
+	}
 
 	login(dto: LoginDto): void {
 		this.loading.set(true)
@@ -121,7 +132,7 @@ export class AuthStoreService {
 				this.tokens.setToken(token)
 				this.user.set({
 					email: dto.email,
-					id: userIdFromToken(token) ?? 0,
+					id: subFromToken(token) ?? 0,
 					name: displayNameFromEmail(dto.email),
 				})
 				this.error.set(null)
@@ -152,7 +163,7 @@ export class AuthStoreService {
 					this.tokens.setToken(token)
 					this.user.set({
 						email: dto.email,
-						id: userIdFromToken(token) ?? 0,
+						id: subFromToken(token) ?? 0,
 						name: dto.name,
 					})
 					this.error.set(null)
