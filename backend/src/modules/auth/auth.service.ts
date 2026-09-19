@@ -105,18 +105,22 @@ export class AuthService {
 
 	private normalizeEmail(value: unknown): string {
 		if (typeof value !== 'string') {
-			throw new ValidationError('Dados inválidos', [
-				{ field: 'email', message: 'email é obrigatório' },
+			throw new ValidationError('E-mail é obrigatório.', [
+				{ field: 'email', message: 'E-mail é obrigatório.' },
 			])
 		}
 		const email = value.trim().toLowerCase()
-		if (
-			email.length === 0 ||
-			email.length > 255 ||
-			!EMAIL_PATTERN.test(email)
-		) {
-			throw new ValidationError('Dados inválidos', [
-				{ field: 'email', message: 'email inválido' },
+		if (email.length === 0) {
+			throw new ValidationError('E-mail é obrigatório.', [
+				{ field: 'email', message: 'E-mail é obrigatório.' },
+			])
+		}
+		if (email.length > 255 || !EMAIL_PATTERN.test(email)) {
+			throw new ValidationError('E-mail inválido. Corrija e tente novamente.', [
+				{
+					field: 'email',
+					message: 'E-mail inválido. Corrija e tente novamente.',
+				},
 			])
 		}
 		return email

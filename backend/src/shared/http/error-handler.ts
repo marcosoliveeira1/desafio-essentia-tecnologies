@@ -20,13 +20,22 @@ export function registerErrorHandler(app: FastifyInstance): void {
 						instancePath?: string
 						message?: string
 					}>
-				).map((v) => ({
-					field:
+				).map((v) => {
+					const field =
 						v.instancePath && v.instancePath !== ''
 							? v.instancePath.replace(/^\//, '')
-							: 'body',
-					message: v.message ?? 'valor inválido',
-				}))
+							: 'body'
+					if (field === 'email') {
+						return {
+							field,
+							message: 'E-mail inválido. Corrija e tente novamente.',
+						}
+					}
+					return {
+						field,
+						message: v.message ?? 'valor inválido',
+					}
+				})
 				const body: ErrorBody = {
 					code: 'VALIDATION_ERROR',
 					message: 'Dados inválidos',

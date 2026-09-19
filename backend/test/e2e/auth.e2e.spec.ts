@@ -95,6 +95,49 @@ describe('auth register/login (e2e)', () => {
 		}
 	})
 
+	it('email inválido → 400 com detalhe pt-BR e code estável', async () => {
+		const requests = [
+			{
+				method: 'POST',
+				payload: { name: 'Ada', email: 'sem-arroba', password: 'segredo12' },
+				url: '/api/auth/register',
+			},
+			{
+				method: 'POST',
+				payload: { email: 'sem-arroba', password: 'segredo12' },
+				url: '/api/auth/login',
+			},
+		] as const
+		for (const req of requests) {
+			const res = await app.inject(req)
+			expect(res.statusCode).toBe(400)
+			expect(res.json()).toMatchObject({
+				code: 'VALIDATION_ERROR',
+				message: 'Dados inválidos',
+				details: [
+					{
+						field: 'email',
+						message: 'E-mail inválido. Corrija e tente novamente.',
+					},
+				],
+			})
+		}
+	})
+
+	it('senha curta segue F7: detalhe de password, sem mensagem de email', async () => {
+		const res = await app.inject({
+			method: 'POST',
+			url: '/api/auth/register',
+			payload: { name: 'Ada', email: 'ada@techx.com', password: 'curta' },
+		})
+		expect(res.statusCode).toBe(400)
+		expect(res.json()).toMatchObject({
+			code: 'VALIDATION_ERROR',
+			details: [{ field: 'password' }],
+		})
+		expect(JSON.stringify(res.json())).not.toContain('E-mail inválido')
+	})
+
 	it('login 200 retorna {token} com sub = userId', async () => {
 		const created = await app.inject({
 			method: 'POST',
