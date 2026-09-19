@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core'
 
-export const TOKEN_STORAGE_KEY = 'techx_token'
+export const TOKEN_STORAGE_KEY = 'essentia_token'
 
 @Injectable({ providedIn: 'root' })
 export class TokenService {

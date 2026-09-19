@@ -38,20 +38,20 @@ describe('AuthStoreService', () => {
 	it('login ok salva token e monta user do sub, authState authenticated', () => {
 		const token = fakeJwt(42)
 
-		store.login({ email: 'demo@techx.com', password: 'demo1234' })
+		store.login({ email: 'demo@essentia.com', password: 'demo1234' })
 		expect(store.loading()).toBe(true)
 
 		const req = httpMock.expectOne('/api/auth/login')
 		expect(req.request.method).toBe('POST')
 		expect(req.request.body).toEqual({
-			email: 'demo@techx.com',
+			email: 'demo@essentia.com',
 			password: 'demo1234',
 		})
 		req.flush({ token })
 
 		expect(tokens.getToken()).toBe(token)
 		expect(store.user()).toEqual({
-			email: 'demo@techx.com',
+			email: 'demo@essentia.com',
 			id: 42,
 			name: 'demo',
 		})
@@ -61,7 +61,7 @@ describe('AuthStoreService', () => {
 	})
 
 	it('login 401 → "Email ou senha inválidos.", sem token nem user', () => {
-		store.login({ email: 'demo@techx.com', password: 'errada' })
+		store.login({ email: 'demo@essentia.com', password: 'errada' })
 
 		const req = httpMock.expectOne('/api/auth/login')
 		req.flush(
@@ -94,7 +94,7 @@ describe('AuthStoreService', () => {
 		const token = fakeJwt(9)
 
 		store.register({
-			email: 'nova@techx.com',
+			email: 'nova@essentia.com',
 			name: 'Nova',
 			password: 'senha123',
 		})
@@ -102,23 +102,23 @@ describe('AuthStoreService', () => {
 		const reg = httpMock.expectOne('/api/auth/register')
 		expect(reg.request.method).toBe('POST')
 		expect(reg.request.body).toEqual({
-			email: 'nova@techx.com',
+			email: 'nova@essentia.com',
 			name: 'Nova',
 			password: 'senha123',
 		})
-		reg.flush({ email: 'nova@techx.com', id: 9, name: 'Nova' })
+		reg.flush({ email: 'nova@essentia.com', id: 9, name: 'Nova' })
 
 		const login = httpMock.expectOne('/api/auth/login')
 		expect(login.request.method).toBe('POST')
 		expect(login.request.body).toEqual({
-			email: 'nova@techx.com',
+			email: 'nova@essentia.com',
 			password: 'senha123',
 		})
 		login.flush({ token })
 
 		expect(tokens.getToken()).toBe(token)
 		expect(store.user()).toEqual({
-			email: 'nova@techx.com',
+			email: 'nova@essentia.com',
 			id: 9,
 			name: 'Nova',
 		})
@@ -129,7 +129,7 @@ describe('AuthStoreService', () => {
 
 	it('register 409 EMAIL_CONFLICT → "Email já cadastrado.", sem login', () => {
 		store.register({
-			email: 'demo@techx.com',
+			email: 'demo@essentia.com',
 			name: 'Demo',
 			password: 'demo1234',
 		})
@@ -148,7 +148,7 @@ describe('AuthStoreService', () => {
 	})
 
 	it('register 400 → "Verifique os dados e tente novamente."', () => {
-		store.register({ email: 'demo@techx.com', name: 'D', password: 'curta' })
+		store.register({ email: 'demo@essentia.com', name: 'D', password: 'curta' })
 
 		const reg = httpMock.expectOne('/api/auth/register')
 		reg.flush(
@@ -162,7 +162,7 @@ describe('AuthStoreService', () => {
 
 	it('logout limpa token, user e erro', () => {
 		const token = fakeJwt(42)
-		store.login({ email: 'demo@techx.com', password: 'demo1234' })
+		store.login({ email: 'demo@essentia.com', password: 'demo1234' })
 		httpMock.expectOne('/api/auth/login').flush({ token })
 		expect(store.authState()).toBe('authenticated')
 

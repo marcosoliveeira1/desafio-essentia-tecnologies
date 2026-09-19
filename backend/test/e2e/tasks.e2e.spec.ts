@@ -13,7 +13,7 @@ async function authHeaders(
 	app: FastifyInstance,
 ): Promise<Record<string, string>> {
 	userSeq += 1
-	const email = `user${Date.now()}_${userSeq}@techx.com`
+	const email = `user${Date.now()}_${userSeq}@essentia.com`
 	const password = 'segredo12'
 	const registered = await app.inject({
 		method: 'POST',

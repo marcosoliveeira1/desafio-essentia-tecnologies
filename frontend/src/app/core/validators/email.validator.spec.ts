@@ -7,8 +7,8 @@ describe('strictEmailValidator', () => {
 
 	it('aceita e-mails válidos (inclusive com espaços nas bordas)', () => {
 		for (const email of [
-			'ada@techx.com',
-			'  ada@techx.com  ',
+			'ada@essentia.com',
+			'  ada@essentia.com  ',
 			'a.b+tag@sub.x.io',
 		]) {
 			expect(validate(email)).toBeNull()

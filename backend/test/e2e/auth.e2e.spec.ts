@@ -33,7 +33,11 @@ describe('auth register/login (e2e)', () => {
 		const res = await app.inject({
 			method: 'POST',
 			url: '/api/auth/register',
-			payload: { name: 'Ada', email: 'Ada@TechX.com', password: 'segredo12' },
+			payload: {
+				name: 'Ada',
+				email: 'Ada@Essentia.com',
+				password: 'segredo12',
+			},
 		})
 		expect(res.statusCode).toBe(201)
 		const body = res.json() as {
@@ -44,7 +48,7 @@ describe('auth register/login (e2e)', () => {
 		}
 		expect(body.id).toBeGreaterThan(0)
 		expect(body.name).toBe('Ada')
-		expect(body.email).toBe('ada@techx.com')
+		expect(body.email).toBe('ada@essentia.com')
 		expect(typeof body.createdAt).toBe('string')
 		expect(body).not.toHaveProperty('passwordHash')
 		expect(body).not.toHaveProperty('password')
@@ -53,7 +57,7 @@ describe('auth register/login (e2e)', () => {
 	it('register duplicado → 409 EMAIL_CONFLICT', async () => {
 		const payload = {
 			name: 'Ada',
-			email: 'ada@techx.com',
+			email: 'ada@essentia.com',
 			password: 'segredo12',
 		}
 		const first = await app.inject({
@@ -73,16 +77,16 @@ describe('auth register/login (e2e)', () => {
 
 	it('register F7 → 400 (senha curta, email inválido, name whitespace, campo extra)', async () => {
 		const cases: Array<Record<string, unknown>> = [
-			{ name: 'Ada', email: 'ada@techx.com', password: 'curta' },
+			{ name: 'Ada', email: 'ada@essentia.com', password: 'curta' },
 			{ name: 'Ada', email: 'sem-arroba', password: 'segredo12' },
-			{ name: '   ', email: 'ada@techx.com', password: 'segredo12' },
+			{ name: '   ', email: 'ada@essentia.com', password: 'segredo12' },
 			{
 				name: 'Ada',
-				email: 'ada@techx.com',
+				email: 'ada@essentia.com',
 				password: 'segredo12',
 				admin: true,
 			},
-			{ name: 'Ada', email: 'ada@techx.com', password: 'x'.repeat(129) },
+			{ name: 'Ada', email: 'ada@essentia.com', password: 'x'.repeat(129) },
 		]
 		for (const payload of cases) {
 			const res = await app.inject({
@@ -128,7 +132,7 @@ describe('auth register/login (e2e)', () => {
 		const res = await app.inject({
 			method: 'POST',
 			url: '/api/auth/register',
-			payload: { name: 'Ada', email: 'ada@techx.com', password: 'curta' },
+			payload: { name: 'Ada', email: 'ada@essentia.com', password: 'curta' },
 		})
 		expect(res.statusCode).toBe(400)
 		expect(res.json()).toMatchObject({
@@ -142,14 +146,18 @@ describe('auth register/login (e2e)', () => {
 		const created = await app.inject({
 			method: 'POST',
 			url: '/api/auth/register',
-			payload: { name: 'Ada', email: 'ada@techx.com', password: 'segredo12' },
+			payload: {
+				name: 'Ada',
+				email: 'ada@essentia.com',
+				password: 'segredo12',
+			},
 		})
 		const userId = (created.json() as { id: number }).id
 
 		const res = await app.inject({
 			method: 'POST',
 			url: '/api/auth/login',
-			payload: { email: 'ada@techx.com', password: 'segredo12' },
+			payload: { email: 'ada@essentia.com', password: 'segredo12' },
 		})
 		expect(res.statusCode).toBe(200)
 		const { token } = res.json() as { token: string }
@@ -162,17 +170,21 @@ describe('auth register/login (e2e)', () => {
 		await app.inject({
 			method: 'POST',
 			url: '/api/auth/register',
-			payload: { name: 'Ada', email: 'ada@techx.com', password: 'segredo12' },
+			payload: {
+				name: 'Ada',
+				email: 'ada@essentia.com',
+				password: 'segredo12',
+			},
 		})
 		const missing = await app.inject({
 			method: 'POST',
 			url: '/api/auth/login',
-			payload: { email: 'ninguem@techx.com', password: 'segredo12' },
+			payload: { email: 'ninguem@essentia.com', password: 'segredo12' },
 		})
 		const wrong = await app.inject({
 			method: 'POST',
 			url: '/api/auth/login',
-			payload: { email: 'ada@techx.com', password: 'errada123' },
+			payload: { email: 'ada@essentia.com', password: 'errada123' },
 		})
 		expect(missing.statusCode).toBe(401)
 		expect(wrong.statusCode).toBe(401)
@@ -184,12 +196,16 @@ describe('auth register/login (e2e)', () => {
 		await app.inject({
 			method: 'POST',
 			url: '/api/auth/register',
-			payload: { name: 'Ada', email: 'ada@techx.com', password: 'segredo12' },
+			payload: {
+				name: 'Ada',
+				email: 'ada@essentia.com',
+				password: 'segredo12',
+			},
 		})
 		const res = await app.inject({
 			method: 'POST',
 			url: '/api/auth/login',
-			payload: { email: 'ada@techx.com', password: 'x' },
+			payload: { email: 'ada@essentia.com', password: 'x' },
 		})
 		expect(res.statusCode).toBe(401)
 		expect(res.json()).toMatchObject({ code: 'UNAUTHORIZED' })
@@ -199,7 +215,7 @@ describe('auth register/login (e2e)', () => {
 		const res = await app.inject({
 			method: 'POST',
 			url: '/api/auth/login',
-			payload: { email: 'ada@techx.com' },
+			payload: { email: 'ada@essentia.com' },
 		})
 		expect(res.statusCode).toBe(400)
 		expect(res.json()).toMatchObject({ code: 'VALIDATION_ERROR' })

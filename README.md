@@ -1,8 +1,8 @@
-# Task Manager TechX
+# Essentia Todo List
 <!-- após o push, trocar SEU_USUARIO pelo usuário GitHub real -->
 [![CI](https://github.com/SEU_USUARIO/desafio-essentia-tecnologies/actions/workflows/ci.yml/badge.svg)](https://github.com/SEU_USUARIO/desafio-essentia-tecnologies/actions/workflows/ci.yml)
 
-App web de gerenciamento de tarefas (to-do list) para os funcionários da TechX organizarem o dia a dia.
+App web de gerenciamento de tarefas (to-do list) para os funcionários da Essentia organizarem o dia a dia.
 
 > Desafio técnico Essentia Technologies (Menatech): CRUD de tarefas com **Angular** no front,
 > API RESTful **Node.js + TypeScript (Fastify)** no back e **MySQL** como fonte da verdade —
@@ -71,7 +71,7 @@ npm run seed --prefix backend
 ```
 
 - Idempotente: segunda execução não duplica (usuário por `findByEmail`, tarefas só se a tabela estiver vazia; órfãs pré-Fase-5 ganham `userId` do demo).
-- Credenciais demo: **`demo@techx.com` / `demo1234`** (+ 5 tarefas de exemplo vinculadas ao usuário).
+- Credenciais demo: **`demo@essentia.com` / `demo1234`** (+ 5 tarefas de exemplo vinculadas ao usuário).
 
 ## Desenvolvimento local (fallback sem compose full)
 
@@ -133,9 +133,9 @@ Base no compose: `http://localhost` (Caddy). Dev local: API em `http://localhost
 ```bash
 BASE=http://localhost
 curl -s -X POST $BASE/api/auth/register -H 'Content-Type: application/json' \
-  -d '{"name":"Demo","email":"demo@techx.com","password":"demo1234"}'
+  -d '{"name":"Demo","email":"demo@essentia.com","password":"demo1234"}'
 curl -s -X POST $BASE/api/auth/login -H 'Content-Type: application/json' \
-  -d '{"email":"demo@techx.com","password":"demo1234"}'
+  -d '{"email":"demo@essentia.com","password":"demo1234"}'
 # {"token":"<JWT>"}
 TOKEN=<cole o token>
 curl -s $BASE/api/tasks -H "Authorization: Bearer $TOKEN"
@@ -174,4 +174,8 @@ curl -s $BASE/health
 
 ## Screenshots
 
-> Screenshots ainda não adicionadas — placeholder: após subir o compose e o seed, capturar a lista de tarefas logada como demo, o detalhe/edição e o feed de atividades, e salvar em `docs/screenshots/` referenciando aqui.
+| Lista de tarefas | Feed de atividades |
+| --- | --- |
+| ![Lista de tarefas do usuário demo](docs/screenshots/tasks-list.png) | ![Feed de atividades recentes](docs/screenshots/activity-feed.png) |
+
+> Capturas reais do compose + seed demo (`demo@essentia.com`), logado na UI servida pelo Caddy.

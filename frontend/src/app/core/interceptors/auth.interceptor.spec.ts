@@ -63,7 +63,7 @@ describe('authInterceptor', () => {
 
 		http
 			.post('/api/auth/login', {
-				email: 'demo@techx.com',
+				email: 'demo@essentia.com',
 				password: 'demo1234',
 			})
 			.subscribe()
@@ -111,7 +111,7 @@ describe('authInterceptor', () => {
 		let seen = 0
 		http
 			.post('/api/auth/login', {
-				email: 'demo@techx.com',
+				email: 'demo@essentia.com',
 				password: 'errada',
 			})
 			.subscribe({

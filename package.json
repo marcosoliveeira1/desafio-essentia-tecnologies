@@ -1,8 +1,8 @@
 {
-  "name": "techx-todo-monorepo",
+  "name": "essentia-todo-list",
   "version": "0.1.0",
   "private": true,
-  "description": "Task Manager TechX — monorepo (backend Fastify + frontend Angular + MySQL)",
+  "description": "Essentia Todo List — monorepo (backend Fastify + frontend Angular + MySQL)",
   "engines": {
     "node": ">=22.22.3",
     "npm": ">=9"

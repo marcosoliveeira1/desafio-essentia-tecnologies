@@ -9,7 +9,7 @@ import { TypeOrmTaskRepository } from './modules/tasks/typeorm-task.repository.j
 
 const DEMO_USER = {
 	name: 'Demo',
-	email: 'demo@techx.com',
+	email: 'demo@essentia.com',
 	password: 'demo1234',
 }
 
@@ -19,7 +19,7 @@ const DEMO_TASKS: Array<{
 	completed: boolean
 }> = [
 	{
-		title: 'Conhecer o Task Manager TechX',
+		title: 'Conhecer o Essentia Todo List',
 		description: 'Projeto demo do desafio Essentia',
 		completed: true,
 	},

@@ -14,7 +14,7 @@ import { Router, RouterLink } from '@angular/router'
 import { AuthStoreService } from '../../../../core/services/auth-store.service'
 import { strictEmailValidator } from '../../../../core/validators/email.validator'
 
-const DEMO_EMAIL = 'demo@techx.com'
+const DEMO_EMAIL = 'demo@essentia.com'
 const DEMO_PASSWORD = 'demo1234'
 
 @Component({

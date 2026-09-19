@@ -82,36 +82,36 @@ describe('AuthService (unit, repo in-memory)', () => {
 	it('register aplica hash e retorna usuário público sem passwordHash', async () => {
 		const user = await service.register({
 			name: 'Ada',
-			email: 'Ada@TechX.com ',
+			email: 'Ada@Essentia.com ',
 			password: 'segredo12',
 		})
 		expect(user.id).toBeGreaterThan(0)
 		expect(user.name).toBe('Ada')
-		expect(user.email).toBe('ada@techx.com')
+		expect(user.email).toBe('ada@essentia.com')
 		expect(user.createdAt).toBeInstanceOf(Date)
 		expect(user).not.toHaveProperty('passwordHash')
 
-		const stored = await repo.findByEmail('ada@techx.com')
+		const stored = await repo.findByEmail('ada@essentia.com')
 		expect(stored?.passwordHash).toBe('hash:segredo12')
 	})
 
 	it('register com email duplicado (mesmo case diferente) → 409 EMAIL_CONFLICT', async () => {
 		await service.register({
 			name: 'Ada',
-			email: 'ada@techx.com',
+			email: 'ada@essentia.com',
 			password: 'segredo12',
 		})
 		await expect(
 			service.register({
 				name: 'Outra',
-				email: 'ADA@techx.com',
+				email: 'ADA@essentia.com',
 				password: 'outra1234',
 			}),
 		).rejects.toMatchObject({ statusCode: 409, code: 'EMAIL_CONFLICT' })
 		await expect(
 			service.register({
 				name: 'Outra',
-				email: 'ada@techx.com',
+				email: 'ada@essentia.com',
 				password: 'outra1234',
 			}),
 		).rejects.toBeInstanceOf(ConflictError)
@@ -122,7 +122,7 @@ describe('AuthService (unit, repo in-memory)', () => {
 		await expect(
 			service.register({
 				name: 'Ada',
-				email: 'ada@techx.com',
+				email: 'ada@essentia.com',
 				password: 'segredo12',
 			}),
 		).rejects.toMatchObject({ statusCode: 409, code: 'EMAIL_CONFLICT' })
@@ -131,11 +131,11 @@ describe('AuthService (unit, repo in-memory)', () => {
 	it('login ok retorna {token} com sub = userId', async () => {
 		const created = await service.register({
 			name: 'Ada',
-			email: 'ada@techx.com',
+			email: 'ada@essentia.com',
 			password: 'segredo12',
 		})
 		const result = await service.login({
-			email: ' ada@techx.com',
+			email: ' ada@essentia.com',
 			password: 'segredo12',
 		})
 		expect(result).toEqual({ token: `token-for-${created.id}` })
@@ -145,14 +145,14 @@ describe('AuthService (unit, repo in-memory)', () => {
 	it('login com email inexistente e com senha errada dão o MESMO 401 genérico', async () => {
 		await service.register({
 			name: 'Ada',
-			email: 'ada@techx.com',
+			email: 'ada@essentia.com',
 			password: 'segredo12',
 		})
 		const missing = await service
-			.login({ email: 'ninguem@techx.com', password: 'segredo12' })
+			.login({ email: 'ninguem@essentia.com', password: 'segredo12' })
 			.catch((e) => e)
 		const wrong = await service
-			.login({ email: 'ada@techx.com', password: 'errada123' })
+			.login({ email: 'ada@essentia.com', password: 'errada123' })
 			.catch((e) => e)
 		for (const err of [missing, wrong]) {
 			expect(err).toBeInstanceOf(UnauthorizedError)
@@ -164,11 +164,11 @@ describe('AuthService (unit, repo in-memory)', () => {
 	it('login com senha curta (não-vazia) → 401, não 400', async () => {
 		await service.register({
 			name: 'Ada',
-			email: 'ada@techx.com',
+			email: 'ada@essentia.com',
 			password: 'segredo12',
 		})
 		await expect(
-			service.login({ email: 'ada@techx.com', password: 'x' }),
+			service.login({ email: 'ada@essentia.com', password: 'x' }),
 		).rejects.toMatchObject({
 			statusCode: 401,
 			code: 'UNAUTHORIZED',
@@ -179,7 +179,7 @@ describe('AuthService (unit, repo in-memory)', () => {
 		await expect(
 			service.register({
 				name: 'Ada',
-				email: 'ada@techx.com',
+				email: 'ada@essentia.com',
 				password: 'curta',
 			}),
 		).rejects.toMatchObject({
@@ -188,7 +188,7 @@ describe('AuthService (unit, repo in-memory)', () => {
 		await expect(
 			service.register({
 				name: 'Ada',
-				email: 'ada@techx.com',
+				email: 'ada@essentia.com',
 				password: 'x'.repeat(129),
 			}),
 		).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
@@ -202,7 +202,11 @@ describe('AuthService (unit, repo in-memory)', () => {
 	it('F7 register: name vazio/whitespace/longo → 400', async () => {
 		for (const name of ['', '   ', 'x'.repeat(121)]) {
 			await expect(
-				service.register({ name, email: 'a@techx.com', password: 'segredo12' }),
+				service.register({
+					name,
+					email: 'a@essentia.com',
+					password: 'segredo12',
+				}),
 			).rejects.toMatchObject({
 				code: 'VALIDATION_ERROR',
 			})
@@ -212,7 +216,7 @@ describe('AuthService (unit, repo in-memory)', () => {
 	it('register faz trim no name', async () => {
 		const user = await service.register({
 			name: '  Ada  ',
-			email: 'ada@techx.com',
+			email: 'ada@essentia.com',
 			password: 'segredo12',
 		})
 		expect(user.name).toBe('Ada')
@@ -225,7 +229,7 @@ describe('AuthService (unit, repo in-memory)', () => {
 			code: 'VALIDATION_ERROR',
 		})
 		await expect(
-			service.login({ email: 'a@techx.com', password: '' }),
+			service.login({ email: 'a@essentia.com', password: '' }),
 		).rejects.toMatchObject({
 			code: 'VALIDATION_ERROR',
 		})
@@ -235,14 +239,14 @@ describe('AuthService (unit, repo in-memory)', () => {
 		const entity = Object.assign(new UserEntity(), {
 			id: 1,
 			name: 'Ada',
-			email: 'ada@techx.com',
+			email: 'ada@essentia.com',
 			passwordHash: 'hash:segredo12',
 			createdAt: new Date(),
 		})
 		expect(toPublicUser(entity)).toEqual({
 			id: 1,
 			name: 'Ada',
-			email: 'ada@techx.com',
+			email: 'ada@essentia.com',
 			createdAt: entity.createdAt,
 		})
 		expect(toPublicUser(entity)).not.toHaveProperty('passwordHash')
