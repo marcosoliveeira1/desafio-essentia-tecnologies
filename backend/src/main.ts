@@ -4,11 +4,22 @@ import { createActivityRepository } from './container.js'
 import { createMongoDataSource } from './database/mongo.data-source.js'
 import { createMysqlDataSource } from './database/mysql.data-source.js'
 import { loadEnv } from './env.js'
+import { runSeed } from './seed.js'
 
 async function main(): Promise<void> {
   const config = loadEnv()
   const db = createMysqlDataSource(config.db)
   await db.initialize()
+
+  // Seed demo no boot (Demo/demo@techx.com/demo1234, idempotente):
+  // login demo funciona num `up` fresco sem passo manual. Falha aqui
+  // não derruba o app — só warn, o CRUD segue.
+  try {
+    await runSeed(db)
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('[main] seed demo falhou — seguindo sem dados demo:', err)
+  }
 
   // T21: Mongo (extra Fase 6 — histórico) é OPCIONAL no boot: fora do ar,
   // só warn e o CRUD MySQL segue (degradação HIST-04; T22 registra com falha silenciosa).
