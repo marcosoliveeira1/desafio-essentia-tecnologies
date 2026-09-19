@@ -1,0 +1,4 @@
+.drop-hint {
+	outline: 2px dashed #bfa95f;
+	outline-offset: -2px;
+}

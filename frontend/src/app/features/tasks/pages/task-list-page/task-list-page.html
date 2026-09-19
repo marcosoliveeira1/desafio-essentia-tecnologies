@@ -121,111 +121,53 @@
 					/>
 				}
 			} @else {
-				<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-					@if (store.filter() !== 'done') {
-						<section
-							class="min-h-[200px] rounded-xl bg-gray-50/50 p-4"
-							[class.drop-hint]="dragOver() === 'todo'"
-							(dragover)="onColumnDragOver($event, 'todo')"
-							(dragleave)="onColumnDragLeave()"
-							(drop)="onColumnDrop($event, false)"
-						>
-							<div class="mb-4 flex items-center justify-between">
-								<h2 class="text-sm font-semibold text-gray-700">
-									A fazer ({{ store.pendingCount() }})
-								</h2>
-								<button
-									type="button"
-									data-completed="false"
-									(click)="openCreate(false)"
-									class="font-bold text-gray-400 hover:text-gray-600"
-								>
-									+
-								</button>
-							</div>
-							<div class="space-y-4">
-								@for (task of todo(); track task.id) {
-									<app-task-item
-										[task]="task"
-										[class.drop-before]="
-											dropHint()?.targetId === task.id &&
-											dropHint()?.before === true
-										"
-										[class.drop-after]="
-											dropHint()?.targetId === task.id &&
-											dropHint()?.before === false
-										"
-									(toggle)="onToggle(task.id)"
-									(edit)="onEdit(task.id)"
-									(delete)="askDelete(task)"
-									(history)="openHistory(task.id)"
-									(dragstart)="onItemDragStart(task.id)"
-									(dragOverItem)="onItemDragOver($event)"
-									(dragleave)="onItemDragLeave()"
-									(dropOnItem)="onItemDrop($event)"
-								/>
-							}
-						</div>
-						@if (todo().length === 0) {
-								<p class="py-8 text-center text-xs text-gray-400">
-									Nenhuma tarefa pendente. Tudo em dia.
-								</p>
-							}
-						</section>
-					}
+			<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+				@if (store.filter() !== 'done') {
+					<app-kanban-column
+						[title]="'A fazer (' + store.pendingCount() + ')'"
+						[tasks]="todo()"
+						[completed]="false"
+						[emptyText]="'Nenhuma tarefa pendente. Tudo em dia.'"
+						[dragActive]="dragOver() === 'todo'"
+						[dropHint]="dropHint()"
+						(columnDragOver)="onColumnDragOver($event, 'todo')"
+						(columnDragLeave)="onColumnDragLeave()"
+						(columnDrop)="onColumnDrop($event, false)"
+						(add)="openCreate(false)"
+						(taskToggle)="onToggle($event)"
+						(taskEdit)="onEdit($event)"
+						(taskRemove)="askDelete($event)"
+						(taskHistory)="openHistory($event)"
+						(taskDragStart)="onItemDragStart($event)"
+						(taskDragOver)="onItemDragOver($event)"
+						(taskDragLeave)="onItemDragLeave()"
+						(taskDrop)="onItemDrop($event)"
+					/>
+				}
 
-					@if (store.filter() !== 'pending') {
-						<section
-							class="min-h-[200px] rounded-xl bg-gray-50/50 p-4"
-							[class.drop-hint]="dragOver() === 'done'"
-							(dragover)="onColumnDragOver($event, 'done')"
-							(dragleave)="onColumnDragLeave()"
-							(drop)="onColumnDrop($event, true)"
-						>
-							<div class="mb-4 flex items-center justify-between">
-								<h2 class="text-sm font-semibold text-gray-700">
-									Concluídas ({{ store.doneCount() }})
-								</h2>
-								<button
-									type="button"
-									data-completed="true"
-									(click)="openCreate(true)"
-									class="font-bold text-gray-400 hover:text-gray-600"
-								>
-									+
-								</button>
-							</div>
-							<div class="space-y-4">
-								@for (task of done(); track task.id) {
-									<app-task-item
-										[task]="task"
-										[class.drop-before]="
-											dropHint()?.targetId === task.id &&
-											dropHint()?.before === true
-										"
-										[class.drop-after]="
-											dropHint()?.targetId === task.id &&
-											dropHint()?.before === false
-										"
-									(toggle)="onToggle(task.id)"
-									(edit)="onEdit(task.id)"
-									(delete)="askDelete(task)"
-									(history)="openHistory(task.id)"
-									(dragstart)="onItemDragStart(task.id)"
-										(dragOverItem)="onItemDragOver($event)"
-										(dragleave)="onItemDragLeave()"
-										(dropOnItem)="onItemDrop($event)"
-									/>
-								}
-							</div>
-							@if (done().length === 0) {
-								<p class="py-8 text-center text-xs text-gray-400">
-									Nada concluído ainda. Arraste um card para cá ou marque ✓.
-								</p>
-							}
-						</section>
-					}
-				</div>
+				@if (store.filter() !== 'pending') {
+					<app-kanban-column
+						[title]="'Concluídas (' + store.doneCount() + ')'"
+						[tasks]="done()"
+						[completed]="true"
+						[emptyText]="'Nada concluído ainda. Arraste um card para cá ou marque ✓.'"
+						[dragActive]="dragOver() === 'done'"
+						[dropHint]="dropHint()"
+						(columnDragOver)="onColumnDragOver($event, 'done')"
+						(columnDragLeave)="onColumnDragLeave()"
+						(columnDrop)="onColumnDrop($event, true)"
+						(add)="openCreate(true)"
+						(taskToggle)="onToggle($event)"
+						(taskEdit)="onEdit($event)"
+						(taskRemove)="askDelete($event)"
+						(taskHistory)="openHistory($event)"
+						(taskDragStart)="onItemDragStart($event)"
+						(taskDragOver)="onItemDragOver($event)"
+						(taskDragLeave)="onItemDragLeave()"
+						(taskDrop)="onItemDrop($event)"
+					/>
+				}
+			</div>
 			}
 
 			@if (pendingCreate() !== null) {

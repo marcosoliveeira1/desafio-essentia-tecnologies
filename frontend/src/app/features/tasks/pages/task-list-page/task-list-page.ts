@@ -13,15 +13,15 @@ import { TaskStoreService } from '../../../../core/services/task-store.service'
 import { EmptyState } from '../../../../shared/components/empty-state/empty-state'
 import { LoadingSpinner } from '../../../../shared/components/loading-spinner/loading-spinner'
 import { ConfirmDialog } from '../../components/confirm-dialog/confirm-dialog'
+import { KanbanColumn } from '../../components/kanban-column/kanban-column'
 import { TaskFilters } from '../../components/task-filters/task-filters'
 import { TaskForm } from '../../components/task-form/task-form'
 import { TaskHistory } from '../../components/task-history/task-history'
-import { TaskItem } from '../../components/task-item/task-item'
 
 @Component({
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	imports: [
-		TaskItem,
+		KanbanColumn,
 		ConfirmDialog,
 		TaskForm,
 		TaskFilters,

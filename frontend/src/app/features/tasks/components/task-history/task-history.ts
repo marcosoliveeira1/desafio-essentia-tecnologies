@@ -58,6 +58,7 @@ export class TaskHistory {
 	})
 
 	private readonly api = inject(ActivityApiService)
+	private reqSeq = 0
 
 	constructor() {
 		effect(() => {
@@ -96,12 +97,15 @@ export class TaskHistory {
 		this.errorLocal.set(null)
 		const request =
 			id === null ? this.api.getFeed() : this.api.getTaskHistory(id)
+		const seq = ++this.reqSeq
 		request.subscribe({
 			error: () => {
+				if (seq !== this.reqSeq) return
 				this.errorLocal.set('Falha ao carregar atividades. Tente novamente.')
 				this.loading.set(false)
 			},
 			next: (entries) => {
+				if (seq !== this.reqSeq) return
 				this.entries.set(entries)
 				this.loading.set(false)
 			},

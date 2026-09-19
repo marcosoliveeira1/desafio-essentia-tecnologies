@@ -1,0 +1,43 @@
+<section
+	class="min-h-[200px] rounded-xl bg-gray-50/50 p-4"
+	[class.drop-hint]="dragActive()"
+	(dragover)="columnDragOver.emit($event)"
+	(dragleave)="columnDragLeave.emit()"
+	(drop)="columnDrop.emit($event)"
+>
+	<div class="mb-4 flex items-center justify-between">
+		<h2 class="text-sm font-semibold text-gray-700">{{ title() }}</h2>
+		<button
+			type="button"
+			[attr.data-completed]="completed()"
+			(click)="add.emit()"
+			class="font-bold text-gray-400 hover:text-gray-600"
+		>
+			+
+		</button>
+	</div>
+	<div class="space-y-4">
+		@for (task of tasks(); track task.id) {
+			<app-task-item
+				[task]="task"
+				[class.drop-before]="
+					dropHint()?.targetId === task.id && dropHint()?.before === true
+				"
+				[class.drop-after]="
+					dropHint()?.targetId === task.id && dropHint()?.before === false
+				"
+				(toggle)="taskToggle.emit(task.id)"
+				(edit)="taskEdit.emit(task.id)"
+				(delete)="taskRemove.emit(task)"
+				(history)="taskHistory.emit(task.id)"
+				(dragstart)="taskDragStart.emit(task.id)"
+				(dragOverItem)="taskDragOver.emit($event)"
+				(dragleave)="taskDragLeave.emit()"
+				(dropOnItem)="taskDrop.emit($event)"
+			/>
+		}
+	</div>
+	@if (tasks().length === 0) {
+		<p class="py-8 text-center text-xs text-gray-400">{{ emptyText() }}</p>
+	}
+</section>
