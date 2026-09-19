@@ -30,6 +30,9 @@ export interface AuthPorts {
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
+const DUMMY_HASH =
+	'$2b$10$WbftRaixW7tzaQ1QajsFh.ocp964OTXDDU/fkEtfT1X0sSbdrwSYi'
+
 export function toPublicUser(user: UserEntity): PublicUser {
 	return {
 		id: user.id,
@@ -73,6 +76,7 @@ export class AuthService {
 
 		const user = await this.users.findByEmail(email)
 		if (user === null) {
+			await this.ports.compare(password, DUMMY_HASH)
 			throw new UnauthorizedError('Credenciais inválidas')
 		}
 		const matches = await this.ports.compare(password, user.passwordHash)

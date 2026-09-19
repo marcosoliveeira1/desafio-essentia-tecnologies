@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
 	type AuthPorts,
 	AuthService,
@@ -209,6 +209,24 @@ describe('AuthService (unit, repo in-memory)', () => {
 			expect(err).toMatchObject({ statusCode: 401, code: 'UNAUTHORIZED' })
 		}
 		expect(missing.message).toBe(wrong.message)
+	})
+
+	it('login com email inexistente executa compare contra hash dummy (timing-safe) e mantém 401', async () => {
+		const compare = vi.fn(async () => false)
+		const spied = new AuthService(repo, { ...ports, compare })
+		await expect(
+			spied.login({ email: 'ninguem@essentia.com', password: 'segredo12' }),
+		).rejects.toMatchObject({
+			statusCode: 401,
+			code: 'UNAUTHORIZED',
+			message: 'Credenciais inválidas',
+		})
+		expect(compare).toHaveBeenCalledTimes(1)
+		expect(compare).toHaveBeenCalledWith(
+			'segredo12',
+			expect.stringMatching(/^\$2[aby]\$10\$[./A-Za-z0-9]{53}$/),
+		)
+		expect(ports.signed).toEqual([])
 	})
 
 	it('login com senha curta (não-vazia) → 401, não 400', async () => {
