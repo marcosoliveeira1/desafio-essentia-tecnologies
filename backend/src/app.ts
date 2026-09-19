@@ -30,6 +30,10 @@ export async function buildApp({
 	const app = Fastify({
 		logger: true,
 		ajv: { customOptions: { coerceTypes: false, removeAdditional: false } },
+		// Caddy é o único proxy em produção: trustProxy faz request.ip vir do
+		// X-Forwarded-For, então o bucket do rate-limit é por IP real do cliente
+		// (spec hardening-03, PR-03). Diretos sem proxy: ip = socket.
+		trustProxy: true,
 	})
 	await app.register(cors)
 	// contentSecurityPolicy desligado: a CSP default do helmet quebra o Swagger UI
