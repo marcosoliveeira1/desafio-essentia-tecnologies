@@ -90,6 +90,18 @@ npm start --prefix frontend
 
 - Front dev: `ng serve --proxy-config proxy.conf.json` (ver `frontend/proxy.conf.json`).
 - `npm run setup` é o **único** script da raiz (além do smoke `test:compose`) — todo o resto vive em `backend/` ou `frontend/`.
+- **Rede/auth dos bancos (hardening):** MySQL e Mongo publicam **só em `127.0.0.1`** (`127.0.0.1:3306` / `127.0.0.1:27017` — LAN e `::1` recebem recusa). O Mongo **exige auth**: usuário app `todo` criado por `docker/db/mongo-init.js` (`readWrite` em `todo_activity` + `todo_activity_test`, `authSource=admin`); os defaults de dev (`todo`/`todo`, root `root`) são sobrescritíveis por env (`MYSQL_*`, `MONGO_*` — ver `.env.example` da raiz).
+- **Atenção a volume legado:** `MONGO_INITDB_*` e os scripts de `docker-entrypoint-initdb.d` **não reaplicam** em volume já existente (só rodam com datadir vazio). Se seu `mongo_data` é anterior ao auth, rode `docker compose down -v` e suba de novo (apaga dados dev; rode o seed depois). Verificação manual:
+
+```bash
+# anônimo → esperado falhar:
+docker exec essentia-todo-list-mongo mongosh --quiet todo_activity --eval 'db.tasks.findOne()'
+# MongoServerError: command requires authentication
+# com credenciais → funciona:
+docker exec essentia-todo-list-mongo mongosh --quiet \
+  'mongodb://todo:todo@localhost:27017/todo_activity?authSource=admin' \
+  --eval 'db.getCollectionNames().length'
+```
 
 ### Sem Docker nenhum (bancos instalados na máquina)
 

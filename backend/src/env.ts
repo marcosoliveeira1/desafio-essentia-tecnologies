@@ -79,7 +79,9 @@ export interface MongoConfig {
 function mongoConfig(): MongoConfig {
 	const testUrl = process.env.MONGO_TEST_URL
 	return {
-		url: process.env.MONGO_URL ?? 'mongodb://localhost:27017/todo_activity',
+		url:
+			process.env.MONGO_URL ??
+			'mongodb://todo:todo@localhost:27017/todo_activity?authSource=admin',
 		...(testUrl !== undefined && testUrl !== '' ? { testUrl } : {}),
 	}
 }
