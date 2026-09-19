@@ -12,6 +12,7 @@
     "build": "tsc",
     "test": "vitest run test/unit --passWithNoTests",
     "test:e2e": "vitest run test/e2e --passWithNoTests",
+    "test:mutation": "stryker run",
     "typecheck": "tsc --noEmit",
     "seed": "tsx src/seed.ts",
     "lint": "biome check src test"
@@ -34,6 +35,8 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.14",
+    "@stryker-mutator/core": "^10.0.0",
+    "@stryker-mutator/vitest-runner": "^10.0.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.15.30",
     "tsx": "^4.19.4",

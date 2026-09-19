@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import {
 	type AuthPorts,
 	AuthService,
+	type LoginInput,
+	type RegisterInput,
 	toPublicUser,
 } from '../../src/modules/auth/auth.service.js'
 import { UserEntity } from '../../src/modules/auth/user.entity.js'
@@ -17,6 +19,7 @@ class InMemoryUserRepository implements IUserRepository {
 	private readonly users = new Map<number, UserEntity>()
 	private seq = 1
 	failNextCreateAsDuplicate = false
+	failNextCreateWith?: unknown
 
 	async findByEmail(email: string): Promise<UserEntity | null> {
 		for (const user of this.users.values()) {
@@ -32,6 +35,11 @@ class InMemoryUserRepository implements IUserRepository {
 	}
 
 	async create(data: CreateUserInput): Promise<UserEntity> {
+		if (this.failNextCreateWith !== undefined) {
+			const toThrow = this.failNextCreateWith
+			this.failNextCreateWith = undefined
+			throw toThrow
+		}
 		if (this.failNextCreateAsDuplicate) {
 			this.failNextCreateAsDuplicate = false
 			throw Object.assign(
@@ -107,7 +115,11 @@ describe('AuthService (unit, repo in-memory)', () => {
 				email: 'ADA@essentia.com',
 				password: 'outra1234',
 			}),
-		).rejects.toMatchObject({ statusCode: 409, code: 'EMAIL_CONFLICT' })
+		).rejects.toMatchObject({
+			statusCode: 409,
+			code: 'EMAIL_CONFLICT',
+			message: 'Email já cadastrado',
+		})
 		await expect(
 			service.register({
 				name: 'Outra',
@@ -115,6 +127,44 @@ describe('AuthService (unit, repo in-memory)', () => {
 				password: 'outra1234',
 			}),
 		).rejects.toBeInstanceOf(ConflictError)
+	})
+
+	it('register converte apenas erros reais de UNIQUE (code ou errno) em 409', async () => {
+		repo.failNextCreateWith = { code: 'ER_DUP_ENTRY' }
+		await expect(
+			service.register({
+				name: 'Ada',
+				email: 'ada@essentia.com',
+				password: 'segredo12',
+			}),
+		).rejects.toMatchObject({ code: 'EMAIL_CONFLICT' })
+		repo.failNextCreateWith = { errno: 1062 }
+		await expect(
+			service.register({
+				name: 'Ada',
+				email: 'ada@essentia.com',
+				password: 'segredo12',
+			}),
+		).rejects.toMatchObject({ code: 'EMAIL_CONFLICT' })
+	})
+
+	it('register repropaga erros que não são de UNIQUE (incl. throw null)', async () => {
+		repo.failNextCreateWith = new Error('boom')
+		await expect(
+			service.register({
+				name: 'Ada',
+				email: 'ada@essentia.com',
+				password: 'segredo12',
+			}),
+		).rejects.toMatchObject({ message: 'boom' })
+		repo.failNextCreateWith = null
+		await expect(
+			service.register({
+				name: 'Ada',
+				email: 'ada@essentia.com',
+				password: 'segredo12',
+			}),
+		).rejects.toBeNull()
 	})
 
 	it('register converte ER_DUP_ENTRY (race no UNIQUE) em 409 EMAIL_CONFLICT', async () => {
@@ -192,11 +242,89 @@ describe('AuthService (unit, repo in-memory)', () => {
 				password: 'x'.repeat(129),
 			}),
 		).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
-		for (const email of ['sem-arroba', 'a@', '@x.com', 'a@x', '']) {
+		for (const email of [
+			'sem-arroba',
+			'a@',
+			'@x.com',
+			'a@x',
+			'',
+			'a b@x.com',
+			'a@x.com b',
+		]) {
 			await expect(
 				service.register({ name: 'Ada', email, password: 'segredo12' }),
 			).rejects.toBeInstanceOf(ValidationError)
 		}
+	})
+
+	it('validação de email distingue obrigatório de inválido (mensagens exatas)', async () => {
+		await expect(
+			service.register({ name: 'Ada', email: '   ', password: 'segredo12' }),
+		).rejects.toMatchObject({
+			code: 'VALIDATION_ERROR',
+			details: [{ field: 'email', message: 'E-mail é obrigatório.' }],
+		})
+		await expect(
+			service.register({
+				name: 'Ada',
+				email: 'sem-arroba',
+				password: 'segredo12',
+			}),
+		).rejects.toMatchObject({
+			code: 'VALIDATION_ERROR',
+			details: [
+				{
+					field: 'email',
+					message: 'E-mail inválido. Corrija e tente novamente.',
+				},
+			],
+		})
+	})
+
+	it('register aceita limites exatos de tamanho (name 120, email 255, senha 8/128)', async () => {
+		const noLimite = await service.register({
+			name: 'n'.repeat(120),
+			email: `${'l'.repeat(249)}@x.com`,
+			password: 's'.repeat(128),
+		})
+		expect(noLimite.name).toHaveLength(120)
+		expect(noLimite.email).toHaveLength(255)
+		await expect(
+			service.register({
+				name: 'n',
+				email: `${'l'.repeat(250)}@x.com`,
+				password: 'segredo12',
+			}),
+		).rejects.toBeInstanceOf(ValidationError)
+		await expect(
+			service.register({
+				name: 'n',
+				email: 'oito@x.com',
+				password: 's'.repeat(8),
+			}),
+		).resolves.toMatchObject({ email: 'oito@x.com' })
+	})
+
+	it('register/login rejeitam payload não-objeto e campos de tipo errado (400)', async () => {
+		await expect(
+			service.register(undefined as unknown as RegisterInput),
+		).rejects.toBeInstanceOf(ValidationError)
+		await expect(
+			service.register({ name: 123, email: 'a@b.com', password: 'segredo12' }),
+		).rejects.toBeInstanceOf(ValidationError)
+		await expect(
+			service.register({
+				name: 'Ada',
+				email: 'a@b.com',
+				password: 12345678,
+			}),
+		).rejects.toBeInstanceOf(ValidationError)
+		await expect(
+			service.login(undefined as unknown as LoginInput),
+		).rejects.toBeInstanceOf(ValidationError)
+		await expect(
+			service.login({ email: 'a@b.com', password: 123 }),
+		).rejects.toBeInstanceOf(ValidationError)
 	})
 
 	it('F7 register: name vazio/whitespace/longo → 400', async () => {

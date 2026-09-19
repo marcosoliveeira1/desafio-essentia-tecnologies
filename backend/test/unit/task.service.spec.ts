@@ -1,11 +1,44 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type {
+	IActivityRepository,
+	RecordActivityInput,
+} from '../../src/modules/activity/activity.repository.js'
+import type { ActivityLogEntity } from '../../src/modules/activity/activity-log.entity.js'
 import { InMemoryTaskRepository } from '../../src/modules/tasks/in-memory-task.repository.js'
+import type {
+	CreateTaskInput,
+	UpdateTaskInput,
+} from '../../src/modules/tasks/task.repository.js'
 import { TaskService } from '../../src/modules/tasks/task.service.js'
 import { NotFoundError } from '../../src/shared/errors/not-found.error.js'
 import { ValidationError } from '../../src/shared/errors/validation.error.js'
 
 const USER_A = 1
 const USER_B = 2
+
+class RecordingActivityRepository implements IActivityRepository {
+	readonly calls: RecordActivityInput[] = []
+	failOnce = false
+
+	async record(input: RecordActivityInput): Promise<ActivityLogEntity> {
+		if (this.failOnce) {
+			throw new Error('activity down')
+		}
+		this.calls.push(input)
+		return {
+			taskId: input.taskId,
+			action: input.action,
+		} as unknown as ActivityLogEntity
+	}
+
+	async findByTask(): Promise<ActivityLogEntity[]> {
+		return []
+	}
+
+	async findByUser(): Promise<ActivityLogEntity[]> {
+		return []
+	}
+}
 
 describe('TaskService (unit, repo in-memory)', () => {
 	let repo: InMemoryTaskRepository
@@ -86,6 +119,7 @@ describe('TaskService (unit, repo in-memory)', () => {
 		await expect(service.getById(USER_A, 999)).rejects.toMatchObject({
 			statusCode: 404,
 			code: 'TASK_NOT_FOUND',
+			message: 'Tarefa não encontrada',
 		})
 	})
 
@@ -168,6 +202,7 @@ describe('TaskService (unit, repo in-memory)', () => {
 	it('remove de id inexistente → 404', async () => {
 		await expect(service.remove(USER_A, 777)).rejects.toMatchObject({
 			code: 'TASK_NOT_FOUND',
+			message: 'Tarefa não encontrada',
 		})
 	})
 
@@ -355,5 +390,131 @@ describe('TaskService (unit, repo in-memory)', () => {
 			code: 'TASK_NOT_FOUND',
 			details: { missingIds: [owned.id] },
 		})
+	})
+
+	it('create aceita limites exatos de tamanho (title 255, description 2000)', async () => {
+		const task = await service.create(USER_A, {
+			title: 'x'.repeat(255),
+			description: 'd'.repeat(2000),
+		})
+		expect(task.title).toHaveLength(255)
+		expect(task.description).toHaveLength(2000)
+	})
+
+	it('update rejeita patch null (400)', async () => {
+		const created = await service.create(USER_A, { title: 'x' })
+		await expect(
+			service.update(USER_A, created.id, null as unknown as UpdateTaskInput),
+		).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
+	})
+
+	it('update/remove rejeitam id inválido e campos de tipo errado (400)', async () => {
+		const created = await service.create(USER_A, { title: 'x' })
+		await expect(
+			service.update(USER_A, 0, { title: 'y' }),
+		).rejects.toBeInstanceOf(ValidationError)
+		await expect(service.remove(USER_A, 0)).rejects.toBeInstanceOf(
+			ValidationError,
+		)
+		await expect(
+			service.update(USER_A, created.id, {
+				title: 123,
+			} as unknown as UpdateTaskInput),
+		).rejects.toBeInstanceOf(ValidationError)
+		await expect(
+			service.update(USER_A, created.id, {
+				description: 123,
+			} as unknown as UpdateTaskInput),
+		).rejects.toBeInstanceOf(ValidationError)
+		await expect(
+			service.create(USER_A, {
+				title: 123,
+			} as unknown as CreateTaskInput),
+		).rejects.toBeInstanceOf(ValidationError)
+	})
+
+	it('update: 404 vem da checagem de existência (repo.update não é chamado)', async () => {
+		const updateSpy = vi.spyOn(repo, 'update')
+		await expect(
+			service.update(USER_A, 4242, { title: 'x' }),
+		).rejects.toMatchObject({
+			code: 'TASK_NOT_FOUND',
+			message: 'Tarefa não encontrada',
+		})
+		expect(updateSpy).not.toHaveBeenCalled()
+	})
+
+	it('update: tarefa some entre findById e update → 404', async () => {
+		const created = await service.create(USER_A, { title: 'x' })
+		const updateSpy = vi.spyOn(repo, 'update').mockResolvedValue(null)
+		await expect(
+			service.update(USER_A, created.id, { title: 'y' }),
+		).rejects.toMatchObject({
+			code: 'TASK_NOT_FOUND',
+			message: 'Tarefa não encontrada',
+		})
+		updateSpy.mockRestore()
+	})
+
+	it('reorder: validação de faltantes ocorre no service (updatePositions não é chamado)', async () => {
+		const a = await service.create(USER_A, { title: 'a' })
+		const positionsSpy = vi.spyOn(repo, 'updatePositions')
+		await expect(service.reorder(USER_A, [a.id, 9999])).rejects.toMatchObject({
+			code: 'TASK_NOT_FOUND',
+			message: 'Tarefa não encontrada',
+			details: { missingIds: [9999] },
+		})
+		expect(positionsSpy).not.toHaveBeenCalled()
+	})
+
+	it('registra histórico de atividades nas operações', async () => {
+		const activity = new RecordingActivityRepository()
+		service = new TaskService(repo, activity)
+		const created = await service.create(USER_A, { title: 't' })
+		expect(activity.calls).toEqual([
+			{ taskId: created.id, userId: USER_A, action: 'created' },
+		])
+		await service.update(USER_A, created.id, { completed: true })
+		await service.update(USER_A, created.id, { title: 'novo' })
+		await service.update(USER_A, created.id, { position: 0 })
+		await service.update(USER_A, created.id, { title: 'x2', position: 1 })
+		await service.update(USER_A, created.id, { completed: false })
+		await service.remove(USER_A, created.id)
+		expect(activity.calls.map((c) => c.action)).toEqual([
+			'created',
+			'completed',
+			'updated',
+			'updated',
+			'uncompleted',
+			'deleted',
+		])
+		expect(activity.calls).toHaveLength(6)
+		expect(activity.calls.at(-1)).toEqual({
+			taskId: created.id,
+			userId: USER_A,
+			action: 'deleted',
+		})
+	})
+
+	it('falha no histórico não derruba a operação (degradado)', async () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+		const activity = new RecordingActivityRepository()
+		activity.failOnce = true
+		service = new TaskService(repo, activity)
+		const created = await service.create(USER_A, { title: 't' })
+		expect(created.title).toBe('t')
+		expect(warn).toHaveBeenCalledTimes(1)
+		expect(warn.mock.calls[0][0]).toBe(
+			'[task-service] histórico de atividades degradado:',
+		)
+		warn.mockRestore()
+	})
+
+	it('sem activity repository não há warning nem erro', async () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+		const created = await service.create(USER_A, { title: 't' })
+		await service.remove(USER_A, created.id)
+		expect(warn).not.toHaveBeenCalled()
+		warn.mockRestore()
 	})
 })
