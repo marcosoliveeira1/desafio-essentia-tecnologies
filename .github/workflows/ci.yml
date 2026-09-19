@@ -90,6 +90,27 @@ jobs:
           MONGO_TEST_URL: mongodb://127.0.0.1:27017/todo_activity_test
         run: npm run test:e2e --prefix backend
 
+  smoke:
+    runs-on: ubuntu-latest
+    needs: verify
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Generate throwaway JWT secret
+        run: echo "JWT_SECRET=$(openssl rand -base64 32)" > .env
+
+      - name: Compose smoke (full stack via Caddy :80)
+        run: npm run test:compose
+
   # deploy:
   #   Placeholder: deploy fora de escopo neste momento.
   #   runs-on: ubuntu-latest
