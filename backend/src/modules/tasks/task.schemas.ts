@@ -21,7 +21,13 @@ export const createTaskBodySchema = Type.Object(
 	{
 		title: titleSchema,
 		description: Type.Optional(descriptionSchema),
-		completed: Type.Optional(Type.Boolean()),
+		completed: Type.Optional(
+			Type.Boolean({
+				description:
+					'Preset da coluna de origem (true quando criada pelo + de Concluídas; omitido/false = A fazer)',
+				examples: [true],
+			}),
+		),
 	},
 	{
 		additionalProperties: false,

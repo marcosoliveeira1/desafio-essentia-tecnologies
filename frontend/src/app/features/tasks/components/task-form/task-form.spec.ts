@@ -98,6 +98,53 @@ describe('TaskForm', () => {
 		expect(saved).toHaveBeenCalledTimes(1)
 	})
 
+	it('preset Concluídas chama store.add com completed:true', async () => {
+		const fixture = await createForm()
+		const component = fixture.componentInstance
+
+		fixture.componentRef.setInput('completedPreset', true)
+		fixture.detectChanges()
+		await fixture.whenStable()
+		fixture.detectChanges()
+
+		component.form.controls.title.setValue('  Estudar Angular  ')
+		component.form.controls.description.setValue('  Revisar sinais  ')
+
+		fixture.nativeElement
+			.querySelector('form')
+			.dispatchEvent(new Event('submit'))
+		fixture.detectChanges()
+
+		expect(storeFake.add).toHaveBeenCalledTimes(1)
+		expect(storeFake.add).toHaveBeenCalledWith({
+			description: 'Revisar sinais',
+			title: 'Estudar Angular',
+			completed: true,
+		})
+	})
+
+	it('sem preset chama store.add sem a chave completed', async () => {
+		const fixture = await createForm()
+		const component = fixture.componentInstance
+
+		component.form.controls.title.setValue('  Estudar Angular  ')
+		component.form.controls.description.setValue('  Revisar sinais  ')
+
+		fixture.nativeElement
+			.querySelector('form')
+			.dispatchEvent(new Event('submit'))
+		fixture.detectChanges()
+
+		expect(storeFake.add).toHaveBeenCalledTimes(1)
+		expect(storeFake.add).toHaveBeenCalledWith({
+			description: 'Revisar sinais',
+			title: 'Estudar Angular',
+		})
+		expect('completed' in (storeFake.add.mock.calls[0][0] as object)).toBe(
+			false,
+		)
+	})
+
 	it('modo edição chama store.update com { title, description } exato (sem position)', async () => {
 		const fixture = await createForm()
 		const component = fixture.componentInstance

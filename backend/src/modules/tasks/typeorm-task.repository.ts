@@ -35,7 +35,7 @@ export class TypeOrmTaskRepository implements ITaskRepository {
 			const task = repo.create({
 				title: data.title,
 				description: data.description ?? null,
-				completed: false,
+				completed: data.completed ?? false,
 				position,
 				userId: userId ?? null,
 			})

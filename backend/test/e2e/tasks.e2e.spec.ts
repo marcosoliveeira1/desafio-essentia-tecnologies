@@ -127,6 +127,42 @@ describe('tasks CRUD (e2e happy paths)', () => {
 		expect((gone.json() as { code: string }).code).toBe('TASK_NOT_FOUND')
 	})
 
+	it('POST com completed:true nasce em Concluídas (PR-18b)', async () => {
+		const headers = await authHeaders(app)
+		const created = await app.inject({
+			method: 'POST',
+			url: '/api/tasks',
+			headers,
+			payload: { title: 'já feita', completed: true },
+		})
+		expect(created.statusCode).toBe(201)
+		const task = created.json() as {
+			id: number
+			title: string
+			completed: boolean
+		}
+		expect(task.completed).toBe(true)
+
+		const got = await app.inject({
+			method: 'GET',
+			url: `/api/tasks/${task.id}`,
+			headers,
+		})
+		expect(got.statusCode).toBe(200)
+		expect((got.json() as { completed: boolean }).completed).toBe(true)
+
+		const listed = await app.inject({
+			method: 'GET',
+			url: '/api/tasks',
+			headers,
+		})
+		expect(listed.statusCode).toBe(200)
+		const found = (
+			listed.json() as Array<{ id: number; completed: boolean }>
+		).find((t) => t.id === task.id)
+		expect(found?.completed).toBe(true)
+	})
+
 	it('GET por id inexistente → 404 TASK_NOT_FOUND', async () => {
 		const headers = await authHeaders(app)
 		const res = await app.inject({

@@ -105,10 +105,18 @@ describe('TaskService (unit, repo in-memory)', () => {
 		})
 	})
 
-	it('força completed=false mesmo quando o cliente envia true', async () => {
+	it('create com completed:true nasce concluída (PR-18b)', async () => {
 		const task = await service.create(USER_A, {
-			title: 'novo',
+			title: 'já feita',
 			completed: true,
+		})
+		expect(task.completed).toBe(true)
+	})
+
+	it('create com completed:false explícito nasce pendente', async () => {
+		const task = await service.create(USER_A, {
+			title: 'a fazer',
+			completed: false,
 		})
 		expect(task.completed).toBe(false)
 	})

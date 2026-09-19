@@ -35,7 +35,7 @@ export class InMemoryTaskRepository implements ITaskRepository {
 			id: this.seq++,
 			title: data.title,
 			description: data.description ?? null,
-			completed: false,
+			completed: data.completed ?? false,
 			position,
 			userId: userId ?? null,
 			createdAt: now,

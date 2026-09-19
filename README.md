@@ -119,7 +119,7 @@ Base no compose: `http://localhost` (Caddy). Dev local: API em `http://localhost
 | `POST` | `/api/auth/login` | não¹ | Credenciais → `200 { token }` (JWT `sub` = userId, exp `12h`) |
 | `GET` | `/api/tasks` | sim | Lista do dono, ordem de `position` |
 | `GET` | `/api/tasks/:id` | sim | Detalhe do dono (`404` cross-user) |
-| `POST` | `/api/tasks` | sim | Cria (`position` = MAX+1 do dono, input ignorado) → `201` |
+| `POST` | `/api/tasks` | sim | Cria (`position` = MAX+1 do dono, input ignorado; `completed?` default `false`, `completed:true` nasce em Concluídas) → `201` |
 | `PATCH` | `/api/tasks/reorder` | sim | Reordena (`{ ids: [...] }`, `position` = índice 0-based) — declarada **antes** de `/:id` |
 | `PATCH` | `/api/tasks/:id` | sim | Atualiza parcial (título/descrição/completed/`position`) |
 | `DELETE` | `/api/tasks/:id` | sim | Remove → `204` |
@@ -142,6 +142,8 @@ TOKEN=<cole o token>
 curl -s $BASE/api/tasks -H "Authorization: Bearer $TOKEN"
 curl -s -X POST $BASE/api/tasks -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
   -d '{"title":"Estudar README","description":"Ler com calma"}'
+curl -s -X POST $BASE/api/tasks -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"title":"Já feita","completed":true}'
 curl -s -X PATCH $BASE/api/tasks/1 -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
   -d '{"completed":true}'
 curl -s -X PATCH $BASE/api/tasks/reorder -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \

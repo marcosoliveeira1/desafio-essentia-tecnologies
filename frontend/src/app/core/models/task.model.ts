@@ -15,6 +15,7 @@ export interface Task {
 export interface CreateTaskDto {
 	title: string
 	description?: string | null
+	completed?: boolean
 }
 
 export interface UpdateTaskDto {

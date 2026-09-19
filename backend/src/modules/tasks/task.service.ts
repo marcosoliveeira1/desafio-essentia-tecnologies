@@ -32,8 +32,9 @@ export class TaskService {
 	async create(userId: number, input: CreateTaskInput): Promise<TaskEntity> {
 		const title = this.normalizeTitle(input?.title)
 		const description = this.normalizeDescription(input?.description)
+		const completed = input?.completed ?? false
 		const created = await this.repo.create(
-			{ title, description, completed: false },
+			{ title, description, completed },
 			userId,
 		)
 		this.record({ taskId: created.id, userId, action: 'created' })

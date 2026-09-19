@@ -10,7 +10,10 @@
 		class="space-y-3 p-5"
 		novalidate
 	>
-		<h3 class="font-semibold text-gray-800">{{ isEditing() ? 'Editar tarefa' : 'Criar tarefa' }}</h3>
+		<h3 class="font-semibold text-gray-800">{{ isEditing() ? 'Editar tarefa' : (completedPreset() ? 'Nova concluída' : 'Criar tarefa') }}</h3>
+		@if (!isEditing() && completedPreset()) {
+			<p class="text-xs text-gray-600">Vai nascer em <span class="font-medium text-gray-800">Concluídas</span>.</p>
+		}
 		<div>
 			<label for="taskTitle" class="mb-1 block text-xs font-medium text-gray-600"
 				>Título *</label

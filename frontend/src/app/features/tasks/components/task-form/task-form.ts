@@ -115,6 +115,7 @@ export class TaskForm {
 			this.store.update(current.id, { description, title })
 		} else {
 			const dto: CreateTaskDto = { description, title }
+			if (this.completedPreset()) dto.completed = true
 			this.store.add(dto)
 		}
 		this.submitting.set(false)
