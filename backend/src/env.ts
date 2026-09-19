@@ -2,6 +2,8 @@ export interface AppEnv {
 	nodeEnv: string
 	host: string
 	port: number
+	corsOrigins?: string[]
+	swaggerEnabled: boolean
 	db: DbConfig
 	dbTest: DbConfig
 	auth: AuthConfig
@@ -86,15 +88,31 @@ function mongoConfig(): MongoConfig {
 	}
 }
 
+function corsOrigins(): string[] | undefined {
+	const raw = process.env.CORS_ORIGINS
+	if (raw === undefined || raw === '') return undefined
+	const origins = raw
+		.split(',')
+		.map((o) => o.trim())
+		.filter((o) => o !== '')
+	return origins.length > 0 ? origins : undefined
+}
+
+function swaggerEnabled(nodeEnv: string): boolean {
+	const raw = process.env.SWAGGER_ENABLED
+	if (raw === undefined || raw === '') return nodeEnv !== 'production'
+	if (raw === 'true') return true
+	if (raw === 'false') return false
+	throw new Error(
+		`[env] variável SWAGGER_ENABLED deve ser "true" ou "false" (recebido: ${raw})`,
+	)
+}
+
 function authConfig(nodeEnv: string): AuthConfig {
-	const fallback =
-		nodeEnv === 'production'
-			? undefined
-			: 'dev-only-insecure-secret-min-32-chars!!'
-	const raw = process.env.JWT_SECRET ?? fallback
+	const raw = process.env.JWT_SECRET
 	if (raw === undefined || raw === '') {
 		throw new Error(
-			'[env] variável obrigatória ausente ou vazia: JWT_SECRET (ver backend/.env.example)',
+			`[env] JWT_SECRET é obrigatória em QUALQUER ambiente (NODE_ENV=${nodeEnv}) — defina com 32+ caracteres (ver backend/.env.example)`,
 		)
 	}
 	if (raw.length < 32) {
@@ -129,6 +147,8 @@ export function loadEnv(): AppEnv {
 		nodeEnv,
 		host: process.env.APP_HOST ?? '0.0.0.0',
 		port: numberVar('APP_PORT', process.env.APP_PORT, 3000),
+		corsOrigins: corsOrigins(),
+		swaggerEnabled: swaggerEnabled(nodeEnv),
 		db: dbConfig(''),
 		dbTest: dbConfig('TEST_'),
 		auth: authConfig(nodeEnv),

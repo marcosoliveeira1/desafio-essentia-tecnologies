@@ -13,6 +13,7 @@ import {
 import { Router, RouterLink } from '@angular/router'
 import { AuthStoreService } from '../../../../core/services/auth-store.service'
 import { strictEmailValidator } from '../../../../core/validators/email.validator'
+import { passwordLengthValidator } from '../../../../core/validators/password.validator'
 
 @Component({
 	changeDetection: ChangeDetectionStrategy.OnPush,
@@ -36,7 +37,7 @@ export class RegisterPage {
 		}),
 		password: new FormControl('', {
 			nonNullable: true,
-			validators: [Validators.required, Validators.minLength(8)],
+			validators: [Validators.required, passwordLengthValidator],
 		}),
 	})
 

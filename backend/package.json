@@ -8,13 +8,13 @@
 		"node": ">=20"
 	},
 	"scripts": {
-		"dev": "tsx watch src/main.ts",
+		"dev": "tsx watch --env-file-if-exists=.env src/main.ts",
 		"build": "tsc",
 		"test": "vitest run test/unit --passWithNoTests",
 		"test:e2e": "vitest run test/e2e --passWithNoTests",
 		"test:mutation": "stryker run",
 		"typecheck": "tsc --noEmit",
-		"seed": "tsx src/seed.ts",
+		"seed": "tsx --env-file-if-exists=.env src/seed.ts",
 		"lint": "biome check src test"
 	},
 	"dependencies": {

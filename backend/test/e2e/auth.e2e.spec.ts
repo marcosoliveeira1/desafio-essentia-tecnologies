@@ -75,7 +75,7 @@ describe('auth register/login (e2e)', () => {
 		expect(second.json()).toMatchObject({ code: 'EMAIL_CONFLICT' })
 	})
 
-	it('register F7 → 400 (senha curta, email inválido, name whitespace, campo extra)', async () => {
+	it('register F7 → 400 (senha curta, email inválido, name whitespace, campo extra, senha >72)', async () => {
 		const cases: Array<Record<string, unknown>> = [
 			{ name: 'Ada', email: 'ada@essentia.com', password: 'curta' },
 			{ name: 'Ada', email: 'sem-arroba', password: 'segredo12' },
@@ -87,6 +87,7 @@ describe('auth register/login (e2e)', () => {
 				admin: true,
 			},
 			{ name: 'Ada', email: 'ada@essentia.com', password: 'x'.repeat(129) },
+			{ name: 'Ada', email: 'ada@essentia.com', password: 'x'.repeat(73) },
 		]
 		for (const payload of cases) {
 			const res = await app.inject({

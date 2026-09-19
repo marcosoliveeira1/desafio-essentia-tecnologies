@@ -66,6 +66,9 @@ services:
       MONGO_URL: mongodb://${MONGO_APP_USERNAME:-todo}:${MONGO_APP_PASSWORD:-todo}@mongo:27017/todo_activity?authSource=admin
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET ausente — exporte JWT_SECRET com 32+ chars antes do up}
       JWT_EXPIRES_IN: 12h
+      # Demo consciente: Swagger em production é opt-in (spec hardening-03,
+      # PR-06 / Assumption "Swagger em production"). Remova para fechar /api/docs.
+      SWAGGER_ENABLED: "true"
     depends_on:
       mysql:
         condition: service_healthy

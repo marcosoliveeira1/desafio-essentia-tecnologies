@@ -4,7 +4,10 @@ import jwt from '@fastify/jwt'
 import rateLimit from '@fastify/rate-limit'
 import swagger from '@fastify/swagger'
 import swaggerUi from '@fastify/swagger-ui'
-import Fastify, { type FastifyInstance } from 'fastify'
+import Fastify, {
+	type FastifyContextConfig,
+	type FastifyInstance,
+} from 'fastify'
 import type { DataSource } from 'typeorm'
 import { type ModuleOverrides, registerModules } from './container.js'
 import { env } from './env.js'
@@ -35,24 +38,46 @@ export async function buildApp({
 		// (spec hardening-03, PR-03). Diretos sem proxy: ip = socket.
 		trustProxy: true,
 	})
-	await app.register(cors)
-	// contentSecurityPolicy desligado: a CSP default do helmet quebra o Swagger UI
-	// servido em /api/docs; os demais headers de segurança seguem ativos (spec
-	// hardening-01, edge case de H3).
-	await app.register(helmet, { contentSecurityPolicy: false })
-	await app.register(swagger, {
-		openapi: {
-			info: {
-				title: 'Essentia Todo List — API',
-				description:
-					'API do gerenciador de tarefas Essentia: autenticação JWT, CRUD de tarefas e histórico de atividades.',
-				version: '0.1.0',
+	// CSP ativa globalmente (PR-04). Isenção SÓ da superfície /api/docs: helmet
+	// v13 suporta opções por rota via config.helmet — merged sobre a global
+	// (contentSecurityPolicy:false remove apenas a CSP; demais headers ficam).
+	app.addHook('onRoute', (routeOptions) => {
+		if (
+			typeof routeOptions.url === 'string' &&
+			routeOptions.url.startsWith('/api/docs')
+		) {
+			routeOptions.config = {
+				...(routeOptions.config as Record<string, unknown> | undefined),
+				helmet: { contentSecurityPolicy: false },
+			} as FastifyContextConfig
+		}
+	})
+	await app.register(helmet)
+	// CORS (PR-05): allowlist explícita via CORS_ORIGINS; unset → dev/test usa
+	// `*`; em production sem allowlist o plugin NÃO é registrado (same-origin
+	// via Caddy).
+	const corsOrigins = env.corsOrigins
+	if (corsOrigins !== undefined) {
+		await app.register(cors, { origin: corsOrigins })
+	} else if (env.nodeEnv !== 'production') {
+		await app.register(cors)
+	}
+	// Swagger opt-in (PR-06): default ligado fora de production; compose de demo força "true"
+	if (env.swaggerEnabled) {
+		await app.register(swagger, {
+			openapi: {
+				info: {
+					title: 'Essentia Todo List — API',
+					description:
+						'API do gerenciador de tarefas Essentia: autenticação JWT, CRUD de tarefas e histórico de atividades.',
+					version: '0.1.0',
+				},
 			},
-		},
-	})
-	await app.register(swaggerUi, {
-		routePrefix: '/api/docs',
-	})
+		})
+		await app.register(swaggerUi, {
+			routePrefix: '/api/docs',
+		})
+	}
 	await app.register(jwt, {
 		secret: jwtSecret ?? env.auth.jwtSecret,
 		sign: { expiresIn: env.auth.expiresIn },

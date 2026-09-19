@@ -82,6 +82,8 @@ Em um terminal (API em `:3000`):
 npm run dev --prefix backend
 ```
 
+> **`JWT_SECRET` obrigatória em QUALQUER ambiente (hardening-03):** sem fallback dev — o boot falha sem ela. Exporte a var (`export JWT_SECRET=$(openssl rand -base64 32)`) ou deixe o `backend/.env` carregá-la: os scripts `dev` e `seed` usam `--env-file-if-exists=.env` (Node 24) e leem o `.env` quando ele existir.
+
 Em outro (SPA com proxy `/api` → `http://localhost:3000`):
 
 ```bash

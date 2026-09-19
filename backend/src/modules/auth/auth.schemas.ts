@@ -22,8 +22,8 @@ export const registerBodySchema = Type.Object(
 		email: emailSchema,
 		password: Type.String({
 			minLength: 8,
-			maxLength: 128,
-			description: 'Senha (8..128 chars)',
+			maxLength: 72,
+			description: 'Senha (8..72 chars; bcrypt trunca em 72 bytes)',
 			examples: ['segredo12'],
 		}),
 	},
