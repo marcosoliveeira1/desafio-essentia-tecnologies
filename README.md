@@ -50,6 +50,7 @@ docker compose up --build
 ```
 
 - O compose exige `JWT_SECRET` **fail-fast** (`${JWT_SECRET:?...}` — sem a var, o `up` nem sobe).
+- Dois `.env.example` de propósito: o da **raiz** documenta só o `JWT_SECRET` que o compose lê; o de `backend/` cobre o dev local/e2e (`DB_*`, Mongo, JWT).
 - Aguarde os healthchecks (MySQL → Mongo → backend → frontend).
 - Abra **http://localhost** (Caddy serve a SPA e proxya a API).
 - Cheque a API pelo próprio host:
