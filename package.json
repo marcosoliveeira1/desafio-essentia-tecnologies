@@ -9,6 +9,11 @@
 	},
 	"scripts": {
 		"setup": "npm --prefix backend install && npm --prefix frontend install",
+		"setup:env": "bash scripts/setup-env.sh",
+		"up": "bash scripts/up.sh --no-seed",
+		"up:d": "bash scripts/up.sh --no-seed --detached",
+		"up:dev": "bash scripts/up.sh --seed",
+		"up:dev:d": "bash scripts/up.sh --seed --detached",
 		"test:compose": "bash scripts/smoke-compose.sh"
 	}
 }

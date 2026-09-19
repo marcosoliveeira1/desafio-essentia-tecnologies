@@ -45,14 +45,16 @@ backend → MySQL 8 (users, tasks) · MongoDB 7 (activity_log, opcional/degradá
 ## Quickstart (Docker — caminho principal)
 
 ```bash
-cp .env.example .env          # ajuste JWT_SECRET se quiser (32+ chars)
-docker compose up --build
+npm run up:dev             # stack + seed demo (demo@essentia.com/demo1234) + logs -f
+# npm run up              # stack prod-like pura, sem seed
+# npm run up:dev:d / up:d # variantes detached (sem seguir logs)
 ```
 
-- O compose exige `JWT_SECRET` **fail-fast** (`${JWT_SECRET:?...}` — sem a var, o `up` nem sobe). O `.env` da raiz é lido automaticamente pelo compose; `openssl rand -base64 32` gera um segredo de verdade.
+- O `npm run up:dev` roda `scripts/up.sh --seed`: garante o `.env` (`scripts/setup-env.sh` — gera o `JWT_SECRET` com `openssl rand -base64 32` se precisar), sobe com `docker compose up --build --wait` (aguarda os healthchecks MySQL → Mongo → backend → frontend), instala as deps do backend sozinho se faltar `backend/node_modules` (o seed roda no host via `tsx`), roda o **seed demo em modo dev** contra o MySQL em `:3306` e segue os logs (`logs -f`; Ctrl+C sai dos logs, a stack continua — `docker compose down` derruba). O `npm run up` é o mesmo fluxo sem o seed.
+- O compose exige `JWT_SECRET` **fail-fast** (`${JWT_SECRET:?...}` — sem a var, o `up` nem sobe). O `.env` da raiz é lido automaticamente pelo compose.
 - Dois `.env.example` de propósito: o da **raiz** documenta só o `JWT_SECRET` que o compose lê; o de `backend/` cobre o dev local/e2e (`DB_*`, Mongo, JWT).
 - Aguarde os healthchecks (MySQL → Mongo → backend → frontend). Abra **http://localhost** — o Caddy serve a SPA e proxya a API.
-- No compose o backend roda com `NODE_ENV=production` e o **seed demo não roda em produção** (gated em `backend/src/seed.ts`). Para popular o usuário demo, rode da raiz do repo (o seed roda no host, em modo dev, contra o MySQL exposto em `:3306`):
+- O seed demo já roda no `npm run up:dev`. No compose o backend roda com `NODE_ENV=production` e o **seed não roda dentro do container** (gated em `backend/src/seed.ts`) — o script roda o seed no host, em modo dev. Para popular manualmente depois (ou após `docker compose up` direto), da raiz do repo (exige `backend/node_modules` + `JWT_SECRET` exportado):
 
 ```bash
 npm run seed --prefix backend
