@@ -44,6 +44,40 @@ async function truncate(db: DataSource, mongo: DataSource): Promise<void> {
 const sleep = (ms: number): Promise<void> =>
 	new Promise((resolve) => setTimeout(resolve, ms))
 
+type HistoryEvent = {
+	id: string
+	taskId: number
+	userId: number
+	action: string
+	changes: unknown
+	occurredAt: string
+}
+
+// O service grava o histórico em fire-and-forget (não bloqueia a resposta):
+// o teste faz polling em vez de assumir que a escrita já aterrissou.
+async function waitForHistory(
+	app: FastifyInstance,
+	headers: Record<string, string>,
+	taskId: number,
+	expected: number,
+): Promise<HistoryEvent[]> {
+	let events: HistoryEvent[] = []
+	for (let i = 0; i < 30; i++) {
+		const history = await app.inject({
+			method: 'GET',
+			url: `/api/tasks/${taskId}/history`,
+			headers,
+		})
+		expect(history.statusCode).toBe(200)
+		events = history.json() as HistoryEvent[]
+		if (events.length === expected) {
+			return events
+		}
+		await sleep(100)
+	}
+	return events
+}
+
 describe('task history (e2e)', () => {
 	let app: FastifyInstance
 	let db: DataSource
@@ -104,20 +138,7 @@ describe('task history (e2e)', () => {
 		})
 		expect(toggled.statusCode).toBe(200)
 
-		const history = await app.inject({
-			method: 'GET',
-			url: `/api/tasks/${task.id}/history`,
-			headers,
-		})
-		expect(history.statusCode).toBe(200)
-		const events = history.json() as Array<{
-			id: string
-			taskId: number
-			userId: number
-			action: string
-			changes: unknown
-			occurredAt: string
-		}>
+		const events = await waitForHistory(app, headers, task.id, 3)
 		expect(events.map((e) => e.action)).toEqual([
 			'completed',
 			'updated',
@@ -181,15 +202,8 @@ describe('task history (e2e)', () => {
 		expect(feed.statusCode).toBe(200)
 		expect(feed.json()).toEqual([])
 
-		const own = await app.inject({
-			method: 'GET',
-			url: `/api/tasks/${id}/history`,
-			headers: headersA,
-		})
-		expect(own.statusCode).toBe(200)
-		expect(
-			(own.json() as Array<{ action: string }>).map((e) => e.action),
-		).toEqual(['created'])
+		const ownEvents = await waitForHistory(app, headersA, id, 1)
+		expect(ownEvents.map((e) => e.action)).toEqual(['created'])
 	})
 
 	it('degradação: activity lança → CRUD segue (HIST-04)', async () => {
