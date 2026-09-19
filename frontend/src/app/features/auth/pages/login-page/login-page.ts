@@ -12,6 +12,7 @@ import {
 } from '@angular/forms'
 import { Router, RouterLink } from '@angular/router'
 import { AuthStoreService } from '../../../../core/services/auth-store.service'
+import { strictEmailValidator } from '../../../../core/validators/email.validator'
 
 const DEMO_EMAIL = 'demo@techx.com'
 const DEMO_PASSWORD = 'demo1234'
@@ -30,7 +31,7 @@ export class LoginPage {
 	readonly form = new FormGroup({
 		email: new FormControl('', {
 			nonNullable: true,
-			validators: [Validators.required, Validators.email],
+			validators: [Validators.required, strictEmailValidator],
 		}),
 		password: new FormControl('', {
 			nonNullable: true,
@@ -57,6 +58,6 @@ export class LoginPage {
 			return
 		}
 		const { email, password } = this.form.getRawValue()
-		this.store.login({ email: email.trim(), password })
+		this.store.login({ email: email.trim().toLowerCase(), password })
 	}
 }

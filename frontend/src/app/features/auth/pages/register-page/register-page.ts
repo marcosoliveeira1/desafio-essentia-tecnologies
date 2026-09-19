@@ -12,6 +12,7 @@ import {
 } from '@angular/forms'
 import { Router, RouterLink } from '@angular/router'
 import { AuthStoreService } from '../../../../core/services/auth-store.service'
+import { strictEmailValidator } from '../../../../core/validators/email.validator'
 
 @Component({
 	changeDetection: ChangeDetectionStrategy.OnPush,
@@ -27,7 +28,7 @@ export class RegisterPage {
 	readonly form = new FormGroup({
 		email: new FormControl('', {
 			nonNullable: true,
-			validators: [Validators.required, Validators.email],
+			validators: [Validators.required, strictEmailValidator],
 		}),
 		name: new FormControl('', {
 			nonNullable: true,
@@ -53,6 +54,10 @@ export class RegisterPage {
 			return
 		}
 		const { email, name, password } = this.form.getRawValue()
-		this.store.register({ email: email.trim(), name: name.trim(), password })
+		this.store.register({
+			email: email.trim().toLowerCase(),
+			name: name.trim(),
+			password,
+		})
 	}
 }

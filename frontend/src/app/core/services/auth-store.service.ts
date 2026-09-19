@@ -15,6 +15,7 @@ const MSG_LOGIN_FALLBACK = 'Não foi possível entrar. Tente novamente.'
 const MSG_REGISTER_CONFLICT = 'Email já cadastrado.'
 const MSG_REGISTER_FALLBACK = 'Não foi possível criar a conta. Tente novamente.'
 const MSG_BAD_REQUEST = 'Verifique os dados e tente novamente.'
+const MSG_BAD_EMAIL = 'E-mail inválido. Corrija e tente novamente.'
 
 interface RegisterResponse {
 	id: number
@@ -57,10 +58,30 @@ function errorCode(err: unknown): string | null {
 	return null
 }
 
+function hasEmailDetail(err: unknown): boolean {
+	if (!(err instanceof HttpErrorResponse)) return false
+	const body = err.error as { details?: unknown } | null
+	if (
+		body === null ||
+		typeof body !== 'object' ||
+		!Array.isArray(body.details)
+	) {
+		return false
+	}
+	return body.details.some(
+		(d) =>
+			d !== null &&
+			typeof d === 'object' &&
+			'field' in d &&
+			(d as { field?: unknown }).field === 'email',
+	)
+}
+
 function loginErrorMessage(err: unknown): string {
 	if (err instanceof HttpErrorResponse) {
 		if (err.status === 401) return MSG_LOGIN_UNAUTHORIZED
-		if (err.status === 400) return MSG_BAD_REQUEST
+		if (err.status === 400)
+			return hasEmailDetail(err) ? MSG_BAD_EMAIL : MSG_BAD_REQUEST
 	}
 	return MSG_LOGIN_FALLBACK
 }
@@ -70,7 +91,8 @@ function registerErrorMessage(err: unknown): string {
 		if (err.status === 409 || errorCode(err) === 'EMAIL_CONFLICT') {
 			return MSG_REGISTER_CONFLICT
 		}
-		if (err.status === 400) return MSG_BAD_REQUEST
+		if (err.status === 400)
+			return hasEmailDetail(err) ? MSG_BAD_EMAIL : MSG_BAD_REQUEST
 	}
 	return MSG_REGISTER_FALLBACK
 }
