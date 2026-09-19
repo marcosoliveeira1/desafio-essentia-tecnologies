@@ -78,6 +78,31 @@ describe('AuthStoreService', () => {
 		expect(store.loading()).toBe(false)
 	})
 
+	it('login com sub:0 falha fechado: sem token, sem user, nunca id 0', () => {
+		store.login({ email: 'demo@essentia.com', password: 'demo1234' })
+
+		const req = httpMock.expectOne('/api/auth/login')
+		req.flush({ token: fakeJwt(0) })
+
+		expect(tokens.getToken()).toBeNull()
+		expect(store.user()).toBeNull()
+		expect(store.authState()).toBe('anonymous')
+		expect(store.loading()).toBe(false)
+		expect(store.error()).toBe('Não foi possível entrar. Tente novamente.')
+	})
+
+	it('login com token malformado falha fechado: sem token, sem user', () => {
+		store.login({ email: 'demo@essentia.com', password: 'demo1234' })
+
+		const req = httpMock.expectOne('/api/auth/login')
+		req.flush({ token: 'nao-e-um-jwt' })
+
+		expect(tokens.getToken()).toBeNull()
+		expect(store.user()).toBeNull()
+		expect(store.authState()).toBe('anonymous')
+		expect(store.loading()).toBe(false)
+		expect(store.error()).toBe('Não foi possível entrar. Tente novamente.')
+	})
 	it('login 401 → "Email ou senha inválidos.", sem token nem user', () => {
 		store.login({ email: 'demo@essentia.com', password: 'errada' })
 
@@ -178,6 +203,50 @@ describe('AuthStoreService', () => {
 		expect(store.error()).toBe('Verifique os dados e tente novamente.')
 	})
 
+	it('register com sub:0 falha fechado: sem token, sem user, nunca id 0', () => {
+		store.register({
+			email: 'nova@essentia.com',
+			name: 'Nova',
+			password: 'senha123',
+		})
+
+		const reg = httpMock.expectOne('/api/auth/register')
+		reg.flush({ email: 'nova@essentia.com', id: 9, name: 'Nova' })
+
+		const login = httpMock.expectOne('/api/auth/login')
+		login.flush({ token: fakeJwt(0) })
+
+		expect(tokens.getToken()).toBeNull()
+		expect(store.user()).toBeNull()
+		expect(store.authState()).toBe('anonymous')
+		expect(store.loading()).toBe(false)
+		expect(store.error()).toBe(
+			'Não foi possível criar a conta. Tente novamente.',
+		)
+	})
+
+	it('register com token malformado falha fechado: sem token, sem user', () => {
+		store.register({
+			email: 'nova@essentia.com',
+			name: 'Nova',
+			password: 'senha123',
+		})
+
+		const reg = httpMock.expectOne('/api/auth/register')
+		reg.flush({ email: 'nova@essentia.com', id: 9, name: 'Nova' })
+
+		const login = httpMock.expectOne('/api/auth/login')
+		login.flush({ token: 'nao-e-um-jwt' })
+
+		expect(tokens.getToken()).toBeNull()
+		expect(store.user()).toBeNull()
+		expect(store.authState()).toBe('anonymous')
+		expect(store.loading()).toBe(false)
+		expect(store.error()).toBe(
+			'Não foi possível criar a conta. Tente novamente.',
+		)
+	})
+
 	it('logout limpa token, user e erro', () => {
 		const token = fakeJwt(42)
 		store.login({ email: 'demo@essentia.com', password: 'demo1234' })
@@ -259,6 +328,22 @@ describe('AuthStoreService (hidratação no boot)', () => {
 
 	it('token malformado no boot limpa o token e fica anônimo', () => {
 		const store = injectStoreWithToken('nao-e-um-jwt')
+
+		expect(store.user()).toBeNull()
+		expect(store.authState()).toBe('anonymous')
+		expect(localStorage.getItem(TOKEN_STORAGE_KEY)).toBeNull()
+	})
+
+	it('token com sub:0 no boot fica anônimo e limpa o storage', () => {
+		const exp = Math.floor(Date.now() / 1000) + 3600
+		const token = fakeSessionJwt({
+			sub: 0,
+			name: 'Ada',
+			email: 'ada@essentia.com',
+			exp,
+		})
+
+		const store = injectStoreWithToken(token)
 
 		expect(store.user()).toBeNull()
 		expect(store.authState()).toBe('anonymous')

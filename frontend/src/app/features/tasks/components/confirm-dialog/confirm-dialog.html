@@ -1,4 +1,4 @@
-<dialog #dialog class="w-80 rounded-2xl p-6 shadow-xl">
+<dialog #dialog (close)="onCancel()" (cancel)="onCancel()" class="w-80 rounded-2xl p-6 shadow-xl">
 	<h3 class="mb-1 font-semibold text-gray-800">Excluir tarefa?</h3>
 	@if (taskTitle()) {
 		<p class="mb-4 text-sm text-gray-400">"{{ taskTitle() }}"</p>

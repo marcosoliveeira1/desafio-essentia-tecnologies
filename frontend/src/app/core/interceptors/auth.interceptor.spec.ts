@@ -83,6 +83,18 @@ describe('authInterceptor', () => {
 		req.flush('')
 	})
 
+	it('não anexa Authorization em URL externa com /api/ no meio do path', () => {
+		tokens.setToken('jwt-abc')
+
+		http.get('https://cdn.example.com/assets/api/icons.svg').subscribe()
+
+		const req = httpMock.expectOne(
+			'https://cdn.example.com/assets/api/icons.svg',
+		)
+		expect(req.request.headers.has('Authorization')).toBe(false)
+		req.flush('')
+	})
+
 	it('401 em rota protegida limpa o token e navega p/ /auth/login', () => {
 		tokens.setToken('expirado')
 		const navigateSpy = vi

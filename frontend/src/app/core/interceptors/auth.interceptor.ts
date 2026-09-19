@@ -7,7 +7,7 @@ import { TokenService } from '../services/token.service'
 const AUTH_URL_MARKER = '/api/auth'
 
 function isApiUrl(url: string): boolean {
-	return url.includes('/api/')
+	return url.startsWith('/api/')
 }
 
 function isAuthUrl(url: string): boolean {

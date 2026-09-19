@@ -29,7 +29,9 @@ function subFromToken(token: string): number | null {
 	if (payload === null) return null
 	const sub =
 		typeof payload.sub === 'string' ? Number(payload.sub) : payload.sub
-	return typeof sub === 'number' && Number.isFinite(sub) ? sub : null
+	return typeof sub === 'number' && Number.isInteger(sub) && sub > 0
+		? sub
+		: null
 }
 
 function userFromToken(token: string): User | null {
@@ -129,10 +131,17 @@ export class AuthStoreService {
 				this.loading.set(false)
 			},
 			next: ({ token }) => {
+				const id = subFromToken(token)
+				if (id === null) {
+					this.logout()
+					this.error.set(MSG_LOGIN_FALLBACK)
+					this.loading.set(false)
+					return
+				}
 				this.tokens.setToken(token)
 				this.user.set({
 					email: dto.email,
-					id: subFromToken(token) ?? 0,
+					id,
 					name: displayNameFromEmail(dto.email),
 				})
 				this.error.set(null)
@@ -160,10 +169,17 @@ export class AuthStoreService {
 					this.loading.set(false)
 				},
 				next: ({ token }) => {
+					const id = subFromToken(token)
+					if (id === null) {
+						this.logout()
+						this.error.set(MSG_REGISTER_FALLBACK)
+						this.loading.set(false)
+						return
+					}
 					this.tokens.setToken(token)
 					this.user.set({
 						email: dto.email,
-						id: subFromToken(token) ?? 0,
+						id,
 						name: dto.name,
 					})
 					this.error.set(null)
