@@ -53,7 +53,7 @@ describe('TaskStoreService', () => {
 		const created = makeTask({ id: 2, title: 'Nova' })
 		spyObj.create.mockReturnValue(of(created))
 
-		store.add({ title: 'Nova' })
+		store.add({ title: 'Nova' }).subscribe()
 
 		expect(store.tasks()).toEqual([created, makeTask({ id: 1 })])
 		expect(store.loading()).toBe(false)
@@ -65,7 +65,7 @@ describe('TaskStoreService', () => {
 		const updated = makeTask({ id: 1, title: 'Novo' })
 		spyObj.update.mockReturnValue(of(updated))
 
-		store.update(1, { title: 'Novo' })
+		store.update(1, { title: 'Novo' }).subscribe()
 
 		expect(store.tasks()).toEqual([updated])
 		expect(spyObj.update).toHaveBeenCalledWith(1, { title: 'Novo' })
@@ -257,13 +257,13 @@ describe('TaskStoreService', () => {
 
 	it('erros de add/update/remove com mensagens PT-BR e clearError limpa', () => {
 		spyObj.create.mockReturnValue(throwError(() => new Error('fail')))
-		store.add({ title: 'X' })
+		store.add({ title: 'X' }).subscribe({ error: () => undefined })
 		expect(store.error()).toBe(
 			'Não foi possível criar a tarefa. Tente novamente.',
 		)
 
 		spyObj.update.mockReturnValue(throwError(() => new Error('fail')))
-		store.update(1, { title: 'Y' })
+		store.update(1, { title: 'Y' }).subscribe({ error: () => undefined })
 		expect(store.error()).toBe(
 			'Não foi possível atualizar a tarefa. Tente novamente.',
 		)
@@ -398,7 +398,7 @@ describe('TaskStoreService', () => {
 	it('add/update/remove usam pending keys sem loading', () => {
 		const createGate = new Subject<Task>()
 		spyObj.create.mockReturnValue(createGate.asObservable())
-		store.add({ title: 'Nova' })
+		store.add({ title: 'Nova' }).subscribe()
 		expect(store.isPending('create')).toBe(true)
 		expect(store.loading()).toBe(false)
 		createGate.next(makeTask({ id: 9, title: 'Nova' }))
@@ -409,7 +409,7 @@ describe('TaskStoreService', () => {
 		store.tasks.set([makeTask({ id: 1, title: 'Antigo' })])
 		const updateGate = new Subject<Task>()
 		spyObj.update.mockReturnValue(updateGate.asObservable())
-		store.update(1, { title: 'Novo' })
+		store.update(1, { title: 'Novo' }).subscribe()
 		expect(store.isPending('update:1')).toBe(true)
 		expect(store.loading()).toBe(false)
 		updateGate.next(makeTask({ id: 1, title: 'Novo' }))
@@ -425,6 +425,88 @@ describe('TaskStoreService', () => {
 		removeGate.complete()
 		expect(store.isPending('delete:1')).toBe(false)
 		expect(store.loading()).toBe(false)
+	})
+
+	it('add retorna observable que resolve com criada e limpa pending', () => {
+		store.tasks.set([makeTask({ id: 1 })])
+		const created = makeTask({ id: 2, title: 'Nova' })
+		const gate = new Subject<Task>()
+		spyObj.create.mockReturnValue(gate.asObservable())
+
+		let resolved: Task | null = null
+		store.add({ title: 'Nova' }).subscribe((task) => {
+			resolved = task
+		})
+
+		expect(store.isPending('create')).toBe(true)
+		expect(resolved).toBeNull()
+
+		gate.next(created)
+		gate.complete()
+
+		expect(resolved).toEqual(created)
+		expect(store.tasks()).toEqual([created, makeTask({ id: 1 })])
+		expect(store.isPending('create')).toBe(false)
+		expect(store.error()).toBeNull()
+	})
+
+	it('update retorna observable que resolve com atualizada e limpa pending', () => {
+		store.tasks.set([makeTask({ id: 1, title: 'Antigo' })])
+		const updated = makeTask({ id: 1, title: 'Novo' })
+		const gate = new Subject<Task>()
+		spyObj.update.mockReturnValue(gate.asObservable())
+
+		let resolved: Task | null = null
+		store.update(1, { title: 'Novo' }).subscribe((task) => {
+			resolved = task
+		})
+
+		expect(store.isPending('update:1')).toBe(true)
+		expect(resolved).toBeNull()
+
+		gate.next(updated)
+		gate.complete()
+
+		expect(resolved).toEqual(updated)
+		expect(store.tasks()).toEqual([updated])
+		expect(store.isPending('update:1')).toBe(false)
+		expect(store.error()).toBeNull()
+	})
+
+	it('erro no add propaga ao subscriber, seta error e limpa pending', () => {
+		const before = [makeTask({ id: 1 })]
+		store.tasks.set(before)
+		const failure = new Error('fail')
+		spyObj.create.mockReturnValue(throwError(() => failure))
+
+		let received: unknown = null
+		store.add({ title: 'X' }).subscribe({ error: (err) => (received = err) })
+
+		expect(received).toBe(failure)
+		expect(store.error()).toBe(
+			'Não foi possível criar a tarefa. Tente novamente.',
+		)
+		expect(store.isPending('create')).toBe(false)
+		expect(store.tasks()).toEqual(before)
+	})
+
+	it('erro no update propaga ao subscriber, seta error e limpa pending', () => {
+		const before = [makeTask({ id: 1, title: 'Antigo' })]
+		store.tasks.set(before)
+		const failure = new Error('fail')
+		spyObj.update.mockReturnValue(throwError(() => failure))
+
+		let received: unknown = null
+		store
+			.update(1, { title: 'Y' })
+			.subscribe({ error: (err) => (received = err) })
+
+		expect(received).toBe(failure)
+		expect(store.error()).toBe(
+			'Não foi possível atualizar a tarefa. Tente novamente.',
+		)
+		expect(store.isPending('update:1')).toBe(false)
+		expect(store.tasks()).toEqual(before)
 	})
 
 	it('clear limpa pending (logout)', () => {

@@ -1,4 +1,6 @@
 import { computed, Injectable, inject, signal } from '@angular/core'
+import type { Observable } from 'rxjs'
+import { catchError, finalize, tap, throwError } from 'rxjs'
 import type { CreateTaskDto, Task, UpdateTaskDto } from '../models/task.model'
 import { TaskApiService } from './task-api.service'
 
@@ -102,38 +104,42 @@ export class TaskStoreService {
 		})
 	}
 
-	add(dto: CreateTaskDto): void {
+	add(dto: CreateTaskDto): Observable<Task> {
 		const key = 'create'
 		this.setPending(key)
 		this.error.set(null)
-		this.api.create(dto).subscribe({
-			error: () => {
-				this.error.set(MSG_ADD)
-				this.clearPending(key)
-			},
-			next: (created) => {
+		return this.api.create(dto).pipe(
+			tap((created) => {
 				this.tasks.update((current) => [created, ...current])
+			}),
+			catchError((err: unknown) => {
+				this.error.set(MSG_ADD)
+				return throwError(() => err)
+			}),
+			finalize(() => {
 				this.clearPending(key)
-			},
-		})
+			}),
+		)
 	}
 
-	update(id: number, patch: UpdateTaskDto): void {
+	update(id: number, patch: UpdateTaskDto): Observable<Task> {
 		const key = `update:${id}`
 		this.setPending(key)
 		this.error.set(null)
-		this.api.update(id, patch).subscribe({
-			error: () => {
-				this.error.set(MSG_UPDATE)
-				this.clearPending(key)
-			},
-			next: (updated) => {
+		return this.api.update(id, patch).pipe(
+			tap((updated) => {
 				this.tasks.update((current) =>
 					current.map((task) => (task.id === id ? updated : task)),
 				)
+			}),
+			catchError((err: unknown) => {
+				this.error.set(MSG_UPDATE)
+				return throwError(() => err)
+			}),
+			finalize(() => {
 				this.clearPending(key)
-			},
-		})
+			}),
+		)
 	}
 
 	toggle(id: number): void {
