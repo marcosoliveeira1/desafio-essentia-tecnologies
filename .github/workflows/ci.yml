@@ -45,12 +45,28 @@ jobs:
       - name: Install frontend deps
         run: npm ci --prefix frontend
 
+      - name: Backend typecheck
+        run: npm run typecheck --prefix backend
+
+      - name: Frontend typecheck
+        run: npm run typecheck --prefix frontend
+
+      - name: Backend lint
+        run: npm run lint --prefix backend
+
+      - name: Frontend lint
+        run: npm run lint --prefix frontend
+
+      - name: Backend audit
+        run: npm audit --audit-level=high --prefix backend
+        continue-on-error: true
+
+      - name: Frontend audit
+        run: npm audit --audit-level=high --prefix frontend
+        continue-on-error: true
+
       - name: Prepare test database
         run: mysql -h127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS todo_test"
-
-      # Lint (Biome) fora do CI por ora: o repo nunca foi lint-clean
-      # (biome 2.x aponta 89 diagnósticos pré-existentes em arquivos de todas
-      # as tasks; corrigi-los é escopo próprio). Roda local: npx biome check .
 
       - name: Backend unit tests
         run: npm test --prefix backend
