@@ -14,7 +14,7 @@ App web de gerenciamento de tarefas (to-do list) para os funcionários da Essent
 | Schemas | TypeBox | Contratos TypeScript-first compartilhados entre validação Fastify, tipos do domínio e o OpenAPI do Swagger |
 | ORM | TypeORM | Entidades + migrations versionadas (`migrationsRun: true` — schema roda no boot, zero passo manual) |
 | Fonte da verdade | MySQL 8 | CRUD relacional com escopo por usuário (`userId`) |
-| Histórico | MongoDB 7 | Log de atividades append-only, isolado do relacional (degrada sem derrubar o CRUD) |
+| Histórico | MongoDB 7 | Log de atividades append-only (`task_activity`), isolado do relacional (degrada sem derrubar o CRUD) |
 | Front | Angular 22 (signals) | Estado reativo com `signal`/`computed` nos stores (`task-store`, `auth-store`), sem NgRx para este escopo |
 | Estilo | Tailwind v4 via PostCSS | `@tailwindcss/postcss` + `@import "tailwindcss"` em `styles.css` |
 | Proxy prod | Caddy | Uma porta pública (:80): SPA estática + `reverse_proxy` de `/api/*` e `/health` para `backend:3000` |
@@ -161,7 +161,7 @@ curl -s $BASE/health
 
 - **JWT HS256** (`@fastify/jwt`), `sub` = userId, exp padrão `12h` (`JWT_EXPIRES_IN`); guard `requireAuth` nas rotas de tasks/activity/history; **login em tempo constante** para emails desconhecidos (mesma verificação bcrypt mesmo sem usuário).
 - **bcrypt** (cost 10) para senhas; senha nunca sai da API.
-- **helmet** em todas as respostas (CSP desligada só para o Swagger UI embutido funcionar).
+- **helmet** com **CSP ativa** em todas as respostas (isenção só nas rotas do Swagger UI `/api/docs`); `/api/docs` retorna `404` em production sem `SWAGGER_ENABLED=true`.
 - **Rate limit** escopado: `global: false` — só os POSTs de auth pagam o tributo; CRUD autenticado não é afetado.
 - **Seed demo gated:** `runSeed` retorna cedo em `NODE_ENV=production` (o compose não popula dados demo sem comando explícito).
 
@@ -186,13 +186,15 @@ npm run test:compose                     # smoke full docker na raiz (porta 80 l
 
 | Suíte | Cwd / comando | Resultado |
 | --- | --- | --- |
-| Back unit | `backend/` — `npm test` (`vitest run test/unit`) | **62** passed (task.service + auth.service + schemas + repos) |
-| Back e2e | `backend/` — `npm run test:e2e` (`vitest run test/e2e`) | **49** its (auth, rate-limit, health, docs, history, tasks) — **exige MySQL + Mongo no ar** (`DB_TEST_*`, `MONGO_TEST_URL`; ver `backend/.env.example` e `ci.yml`) |
-| Back mutation | `backend/` — `npm run test:mutation` (Stryker) | Score **75.35%** (auth.service.ts 75.72%, task.service.ts 75.10% — por arquivo, gate 70) — artefato: 2026-09-19 via npm run test:mutation |
-| Front | `frontend/` — `npm test -- --watch=false` | **71** passed |
+| Back unit | `backend/` — `npm test` (`vitest run test/unit`) | **127** passed (task.service + auth.service + schemas + repos + app-variants) |
+| Back e2e | `backend/` — `npm run test:e2e` (`vitest run test/e2e`, 8 arquivos) | **60** its (auth, rate-limit, health, docs, history, tasks, seed, indexes) — **exige MySQL + Mongo no ar** (`DB_TEST_*`, `MONGO_TEST_URL`; ver `backend/.env.example` e `ci.yml`) e `JWT_SECRET` com 32+ chars no ambiente |
+| Back mutation | `backend/` — `npm run test:mutation` (Stryker) | Score **75.35%** (auth.service.ts 75.72% — 131/173, task.service.ts 75.10% — 190/253; por arquivo, gate 70) — artefato: 2026-09-19 via npm run test:mutation |
+| Front | `frontend/` — `npm test -- --watch=false` (14 arquivos) | **123** passed |
 | Smoke full docker | raiz — `npm run test:compose` | Sobe `up --build --wait`, valida health/register/login/duplicado/CRUD via Caddy :80 e derruba com `down -v` |
 
-Pré-requisitos por suíte: unit roda sozinho; e2e precisa de `docker compose up -d mysql mongo` (o init.sql já cria `todo_test`) + `backend/.env`; mutation só usa unit (sem bancos); smoke exige a **porta 80 livre** (ele mesmo faz down do projeto ao sair).
+Pré-requisitos por suíte: unit roda sozinho; e2e precisa de `docker compose up -d mysql mongo` (o init.sql já cria `todo_test`) + `backend/.env` + `JWT_SECRET` exportado no ambiente (`JWT_SECRET=$(openssl rand -base64 32) npm run test:e2e --prefix backend`); mutation só usa unit (sem bancos); smoke exige a **porta 80 livre** (ele mesmo faz down do projeto ao sair).
+
+> Nota mutação: o gate por arquivo (≥ 70 em cada um dos 2 arquivos) é verificado no artefato `backend/reports/mutation/mutation.json` (gitignored — evidência local regenerável; o CI publica como artefato `mutation-report`) — a chave `perFile` não existe no schema do Stryker v10 (só `high`/`low`/`break`, aqui 80/70/70).
 
 ## CI
 
@@ -220,6 +222,18 @@ Gates que reprovam o `verify`: typecheck, lint, **audit (alta ou superior, só d
   - Sem i18n (UI e mensagens de API em pt-BR, `code` de erro estável em inglês).
   - Boot via compose leva ~30s+ por conta dos healthchecks encadeados (MySQL → Mongo → backend → frontend).
   - Concorrência de update é last-write-wins (sem versionamento otimista).
+- **Trade-offs conscientes (demo, sem TLS em localhost):**
+  - HTTP puro sem TLS — o compose é demo localhost-only (`:80`); em produção real, terminar TLS no edge (Caddy `tls` / reverso com certificado).
+  - JWT guardado em `localStorage` (acessível a JS) — aceitável para o escopo do desafio; o caminho de endurecimento seria cookie `HttpOnly` + refresh token (ver Evoluções).
+  - Registro retorna `409 EMAIL_CONFLICT` para email duplicado — permite **enumeração de emails**; trocado por UX do desafio (o login segue genérico `401`, sem vazar qual campo).
+- **Evoluções futuras (fora de escopo, registradas):**
+  - Paginação keyset no `GET /api/tasks` (+ envelope `{data, meta}` quando entrar).
+  - TTL de logs no Mongo (`expireAfterSeconds` em `occurredAt`).
+  - Refresh token com cookie `HttpOnly` (+ revogação).
+  - `/metrics` + split liveness/readiness.
+  - Versionamento otimista (ETag/coluna `version`) no update de tasks.
+  - Drag por teclado + a11y completa (focus trap, ARIA live).
+  - Trivy/SBOM/CodeQL no CI.
 
 ## Screenshots
 
@@ -231,10 +245,10 @@ Gates que reprovam o `verify`: typecheck, lint, **audit (alta ou superior, só d
 
 ## Histórico de commits
 
-O repositório conta a evolução em fases (~60 commits, Conventional Commits):
+O repositório conta a evolução em fases (74 commits, Conventional Commits):
 
 1. **Bootstrap + MVP:** monorepo, compose MySQL, API Fastify com health/erros padronizados, domínio de tarefas (schemas → service → repository → CRUD + e2e), front Angular (store com signals, form, lista, filtros, estados de UI).
 2. **Ordenação manual:** coluna `position`, reorder transacional e drag & drop na UI.
 3. **Extras:** auth JWT (entity/endpoints/escopo por usuário, login/register na UI com guard e interceptor), histórico em MongoDB (eventos, histórico por tarefa, feed de atividades) e full docker prod-like com Caddy.
 4. **CI + docs:** workflow de check e README inicial.
-5. **Hardening/QA (~19 commits):** lint-clean com Biome, mensagens de erro de email em pt-BR, Swagger UI, helmet + rate-limit em auth, gates de typecheck/lint/audit no CI, smoke do compose, mutation testing com Stryker, login em tempo constante, seed gated em produção, reorder atômico e rebranding techx → essentia.
+5. **Hardening/QA (35 commits:** hardening-01 8 + qa-hardening 5 + hardening-02 8 + docs 1 + hardening-03 13**):** lint-clean com Biome, mensagens de erro de email em pt-BR, Swagger UI, helmet + rate-limit em auth, gates de typecheck/lint/audit no CI, smoke do compose, mutation testing com Stryker, login em tempo constante, seed gated em produção, reorder atômico, CSP/CORS/Swagger opt-in, indexes MySQL+Mongo, estado assíncrono do front com `strict`, coverage/audit bloqueantes e rebranding techx → essentia.
