@@ -68,21 +68,15 @@ async function ensureDemoUser(db: DataSource): Promise<UserEntity> {
 }
 
 export async function runSeed(db: DataSource): Promise<void> {
+	if (process.env.NODE_ENV === 'production') {
+		// eslint-disable-next-line no-console
+		console.log('[seed] NODE_ENV=production — seed demo ignorado')
+		return
+	}
+
 	const demo = await ensureDemoUser(db)
 	// eslint-disable-next-line no-console
 	console.log(`[seed] usuário demo pronto: ${demo.email} (id=${demo.id})`)
-
-	const backfilled = await db.query(
-		'UPDATE tasks SET userId = ? WHERE userId IS NULL',
-		[demo.id],
-	)
-	const affected = Array.isArray(backfilled)
-		? 0
-		: (backfilled?.affectedRows ?? 0)
-	if (affected > 0) {
-		// eslint-disable-next-line no-console
-		console.log(`[seed] ${affected} tarefa(s) órfã(s) vinculada(s) ao demo`)
-	}
 
 	const repo = new TypeOrmTaskRepository(db)
 	const existing = await repo.findAll()
