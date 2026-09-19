@@ -1,4 +1,5 @@
 import type { DataSource, Repository } from 'typeorm'
+import { In } from 'typeorm'
 import { NotFoundError } from '../../shared/errors/not-found.error.js'
 import { TaskEntity } from './task.entity.js'
 import type {
@@ -92,34 +93,50 @@ export class TypeOrmTaskRepository implements ITaskRepository {
 		orderedIds: number[],
 		userId?: number,
 	): Promise<TaskEntity[]> {
+		if (orderedIds.length === 0) {
+			return [] // serviço já valida vazio; defesa defensiva sem gastar query
+		}
 		return this.db.transaction(async (manager) => {
 			const repo = manager.getRepository(TaskEntity)
+			const scope = userId === undefined ? {} : { userId }
+
+			// (1) posse: 1 SELECT id IN (…) — contagem para missingIds
+			const owned = await repo.find({
+				select: { id: true },
+				where: { id: In(orderedIds), ...scope },
+			})
+			const ownedIds = new Set(owned.map((t) => t.id))
+			const missingIds = orderedIds.filter((id) => !ownedIds.has(id))
+			if (missingIds.length > 0) {
+				throw new NotFoundError('Tarefa não encontrada', 'TASK_NOT_FOUND', {
+					missingIds,
+				})
+			}
+
+			// (2) 1 UPDATE batch CASE WHEN — 100% parametrizado (placeholders ?)
+			const cases = orderedIds.map(() => 'WHEN ? THEN ?').join(' ')
+			const inPlaceholders = orderedIds.map(() => '?').join(', ')
+			const setParams: number[] = []
 			for (let index = 0; index < orderedIds.length; index++) {
-				const result = await repo.update(
-					userId === undefined
-						? { id: orderedIds[index] }
-						: { id: orderedIds[index], userId },
-					{ position: index },
-				)
-				if ((result.affected ?? 0) === 0) {
-					throw new NotFoundError('Tarefa não encontrada', 'TASK_NOT_FOUND', {
-						missingIds: [orderedIds[index]],
-					})
-				}
+				setParams.push(Number(orderedIds[index]), index)
 			}
-			const result: TaskEntity[] = []
-			for (const id of orderedIds) {
-				const task = await repo.findOneBy(
-					userId === undefined ? { id } : { id, userId },
-				)
-				if (task === null) {
-					throw new NotFoundError('Tarefa não encontrada', 'TASK_NOT_FOUND', {
-						missingIds: [id],
-					})
-				}
-				result.push(task)
-			}
-			return result
+			const whereSql =
+				userId === undefined
+					? `WHERE \`id\` IN (${inPlaceholders})`
+					: `WHERE \`userId\` = ? AND \`id\` IN (${inPlaceholders})`
+			await manager.query(
+				`UPDATE \`tasks\` SET \`position\` = CASE \`id\` ${cases} ELSE \`position\` END ${whereSql}`,
+				[
+					...setParams,
+					...(userId === undefined ? [] : [userId]),
+					...orderedIds,
+				],
+			)
+
+			// (3) 1 SELECT de retorno; ordem do payload reconstruída em memória
+			const rows = await repo.find({ where: { id: In(orderedIds), ...scope } })
+			const byId = new Map(rows.map((t) => [t.id, t]))
+			return orderedIds.map((id) => byId.get(id) as TaskEntity)
 		})
 	}
 }

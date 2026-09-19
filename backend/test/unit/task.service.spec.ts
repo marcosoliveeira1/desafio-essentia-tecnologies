@@ -1,3 +1,5 @@
+import type { DataSource } from 'typeorm'
+import { FindOperator } from 'typeorm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type {
 	IActivityRepository,
@@ -5,11 +7,13 @@ import type {
 } from '../../src/modules/activity/activity.repository.js'
 import type { ActivityLogEntity } from '../../src/modules/activity/activity-log.entity.js'
 import { InMemoryTaskRepository } from '../../src/modules/tasks/in-memory-task.repository.js'
+import type { TaskEntity } from '../../src/modules/tasks/task.entity.js'
 import type {
 	CreateTaskInput,
 	UpdateTaskInput,
 } from '../../src/modules/tasks/task.repository.js'
 import { TaskService } from '../../src/modules/tasks/task.service.js'
+import { TypeOrmTaskRepository } from '../../src/modules/tasks/typeorm-task.repository.js'
 import { NotFoundError } from '../../src/shared/errors/not-found.error.js'
 import { ValidationError } from '../../src/shared/errors/validation.error.js'
 
@@ -467,6 +471,17 @@ describe('TaskService (unit, repo in-memory)', () => {
 		expect(positionsSpy).not.toHaveBeenCalled()
 	})
 
+	it('reorder: service delega ao repo uma única vez com o array completo (sem loop por id)', async () => {
+		const a = await service.create(USER_A, { title: 'a' })
+		const b = await service.create(USER_A, { title: 'b' })
+		const c = await service.create(USER_A, { title: 'c' })
+		const positionsSpy = vi.spyOn(repo, 'updatePositions')
+		const result = await service.reorder(USER_A, [c.id, a.id, b.id])
+		expect(positionsSpy).toHaveBeenCalledTimes(1)
+		expect(positionsSpy).toHaveBeenCalledWith([c.id, a.id, b.id], USER_A)
+		expect(result.map((t) => t.id)).toEqual([c.id, a.id, b.id])
+	})
+
 	it('registra histórico de atividades nas operações', async () => {
 		const activity = new RecordingActivityRepository()
 		service = new TaskService(repo, activity)
@@ -503,7 +518,51 @@ describe('TaskService (unit, repo in-memory)', () => {
 		service = new TaskService(repo, activity)
 		const created = await service.create(USER_A, { title: 't' })
 		expect(created.title).toBe('t')
-		expect(warn).toHaveBeenCalledTimes(1)
+		await vi.waitFor(() => {
+			expect(warn).toHaveBeenCalledTimes(1)
+		})
+		expect(warn.mock.calls[0][0]).toBe(
+			'[task-service] histórico de atividades degradado:',
+		)
+		warn.mockRestore()
+	})
+
+	it('record fire-and-forget: create resolve mesmo com record nunca resolvido', async () => {
+		let resolveRecord!: (value: ActivityLogEntity) => void
+		const pending = new Promise<ActivityLogEntity>((resolve) => {
+			resolveRecord = resolve
+		})
+		const activity: IActivityRepository = {
+			record: vi.fn(() => pending),
+			findByTask: async () => [],
+			findByUser: async () => [],
+		}
+		service = new TaskService(repo, activity)
+		await expect(
+			service.create(USER_A, { title: 'não-espera' }),
+		).resolves.toMatchObject({ title: 'não-espera' })
+		resolveRecord({
+			taskId: 1,
+			action: 'created',
+		} as unknown as ActivityLogEntity)
+	})
+
+	it('record fire-and-forget: rejeição tardia não derruba a operação e warna com prefixo', async () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+		const activity: IActivityRepository = {
+			record: () =>
+				new Promise<ActivityLogEntity>((_resolve, reject) => {
+					setTimeout(() => reject(new Error('mongo caiu')), 0)
+				}),
+			findByTask: async () => [],
+			findByUser: async () => [],
+		}
+		service = new TaskService(repo, activity)
+		const created = await service.create(USER_A, { title: 't' })
+		expect(created.title).toBe('t')
+		await vi.waitFor(() => {
+			expect(warn).toHaveBeenCalledTimes(1)
+		})
 		expect(warn.mock.calls[0][0]).toBe(
 			'[task-service] histórico de atividades degradado:',
 		)
@@ -516,5 +575,174 @@ describe('TaskService (unit, repo in-memory)', () => {
 		await service.remove(USER_A, created.id)
 		expect(warn).not.toHaveBeenCalled()
 		warn.mockRestore()
+	})
+})
+
+interface FakeQueryCall {
+	kind: 'SELECT' | 'UPDATE'
+	sql: string
+	params: unknown[]
+}
+
+function ownedIdsFrom(where: Record<string, unknown> | undefined): number[] {
+	if (where === undefined) {
+		return []
+	}
+	const raw = where.id
+	if (raw instanceof FindOperator) {
+		return raw.value as number[]
+	}
+	return [raw as number]
+}
+
+function matchesWhere(
+	row: TaskEntity,
+	where: Record<string, unknown> | undefined,
+): boolean {
+	if (where === undefined) {
+		return true
+	}
+	if (!ownedIdsFrom(where).includes(row.id)) {
+		return false
+	}
+	if ('userId' in where && where.userId !== row.userId) {
+		return false
+	}
+	return true
+}
+
+// simula o efeito do UPDATE batch CASE WHEN: params = [id, pos, …, (userId?), ids]
+function applyFakeUpdate(
+	rows: TaskEntity[],
+	sql: string,
+	params: unknown[],
+): void {
+	const withUserScope = sql.includes('`userId`')
+	const pairCount = withUserScope ? (params.length - 1) / 3 : params.length / 3
+	for (let index = 0; index < pairCount; index++) {
+		const id = params[index * 2] as number
+		const position = params[index * 2 + 1] as number
+		const row = rows.find((r) => r.id === id)
+		if (row !== undefined) {
+			row.position = position
+		}
+	}
+}
+
+function makeEntity(id: number, userId: number, position: number): TaskEntity {
+	return {
+		id,
+		title: `tarefa-${id}`,
+		description: null,
+		completed: false,
+		position,
+		userId,
+		createdAt: new Date(),
+		updatedAt: new Date(),
+	} as TaskEntity
+}
+
+class CountingFakeManager {
+	constructor(private readonly ds: CountingFakeDataSource) {}
+
+	getRepository(_target?: unknown) {
+		return {
+			find: async (options: {
+				where?: Record<string, unknown>
+			}): Promise<TaskEntity[]> => {
+				this.ds.calls.push({ kind: 'SELECT', sql: 'find', params: [] })
+				return this.ds.rows.filter((row) => matchesWhere(row, options?.where))
+			},
+		}
+	}
+
+	async query(sql: string, params?: unknown[]): Promise<unknown> {
+		const call: FakeQueryCall = { kind: 'UPDATE', sql, params: params ?? [] }
+		this.ds.calls.push(call)
+		applyFakeUpdate(this.ds.rows, call.sql, call.params)
+		return []
+	}
+}
+
+class CountingFakeDataSource {
+	readonly calls: FakeQueryCall[] = []
+	rows: TaskEntity[] = []
+
+	getRepository(_target?: unknown) {
+		return {}
+	}
+
+	async transaction<T>(
+		run: (manager: CountingFakeManager) => Promise<T>,
+	): Promise<T> {
+		return run(new CountingFakeManager(this))
+	}
+}
+
+describe('TypeOrmTaskRepository.updatePositions (unit, fake DataSource)', () => {
+	let ds: CountingFakeDataSource
+	let repo: TypeOrmTaskRepository
+
+	beforeEach(() => {
+		ds = new CountingFakeDataSource()
+		repo = new TypeOrmTaskRepository(ds as unknown as DataSource)
+	})
+
+	it('N=3: exatamente 3 queries [SELECT, UPDATE, SELECT] e retorno na ordem do payload', async () => {
+		ds.rows = [makeEntity(1, 1, 2), makeEntity(2, 1, 0), makeEntity(3, 1, 1)]
+		const result = await repo.updatePositions([3, 1, 2])
+		expect(ds.calls.map((c) => c.kind)).toEqual(['SELECT', 'UPDATE', 'SELECT'])
+		expect(result.map((t) => t.id)).toEqual([3, 1, 2])
+		expect(result.map((t) => t.position)).toEqual([0, 1, 2])
+	})
+
+	it('N=50: ainda são 3 queries (sem N+1)', async () => {
+		ds.rows = Array.from({ length: 50 }, (_, index) =>
+			makeEntity(index + 1, 1, index),
+		)
+		const orderedIds = Array.from({ length: 50 }, (_, index) => 50 - index)
+		const result = await repo.updatePositions(orderedIds)
+		expect(ds.calls).toHaveLength(3)
+		expect(result.map((t) => t.id)).toEqual(orderedIds)
+	})
+
+	it('UPDATE batch CASE WHEN 100% parametrizado: 2N+N params (+1 com userId)', async () => {
+		const a = makeEntity(7, 5, 0)
+		const b = makeEntity(8, 5, 1)
+		const c = makeEntity(9, 5, 2)
+		ds.rows = [a, b, c]
+		await repo.updatePositions([c.id, a.id, b.id], 5)
+		const call = ds.calls.find(
+			(entry) => entry.kind === 'UPDATE',
+		) as FakeQueryCall
+		expect(call.sql).toContain('CASE `id`')
+		expect(call.sql).toContain('IN (')
+		expect(call.params).toHaveLength(2 * 3 + 3 + 1)
+		expect(call.params.slice(0, 6)).toEqual([9, 0, 7, 1, 8, 2])
+		expect(call.params).toContain(5)
+		await repo.updatePositions([c.id, a.id, b.id])
+		const callSemUser = ds.calls
+			.filter((entry) => entry.kind === 'UPDATE')
+			.at(-1) as FakeQueryCall
+		expect(callSemUser.params).toHaveLength(2 * 3 + 3)
+	})
+
+	it('id faltante → NotFoundError com TODOS os missingIds e NENHUM UPDATE (atomicidade)', async () => {
+		ds.rows = [makeEntity(1, 1, 0), makeEntity(2, 1, 1)]
+		await expect(repo.updatePositions([1, 300, 400])).rejects.toMatchObject({
+			statusCode: 404,
+			code: 'TASK_NOT_FOUND',
+			details: { missingIds: [300, 400] },
+		})
+		expect(ds.calls.filter((entry) => entry.kind === 'UPDATE')).toHaveLength(0)
+	})
+
+	it('userId escopo: id de outro usuário vai para missingIds', async () => {
+		ds.rows = [makeEntity(1, 1, 0), makeEntity(2, 2, 1)]
+		await expect(repo.updatePositions([1, 2], 1)).rejects.toMatchObject({
+			code: 'TASK_NOT_FOUND',
+			details: { missingIds: [2] },
+		})
+		expect(ds.calls.filter((entry) => entry.kind === 'UPDATE')).toHaveLength(0)
 	})
 })

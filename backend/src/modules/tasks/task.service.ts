@@ -36,7 +36,7 @@ export class TaskService {
 			{ title, description, completed: false },
 			userId,
 		)
-		await this.record({ taskId: created.id, userId, action: 'created' })
+		this.record({ taskId: created.id, userId, action: 'created' })
 		return created
 	}
 
@@ -90,7 +90,7 @@ export class TaskService {
 			throw new NotFoundError('Tarefa não encontrada', 'TASK_NOT_FOUND')
 		}
 		if (data.completed !== undefined && data.completed !== existing.completed) {
-			await this.record({
+			this.record({
 				taskId: id,
 				userId,
 				action: data.completed ? 'completed' : 'uncompleted',
@@ -98,7 +98,7 @@ export class TaskService {
 		} else if (
 			!(Object.keys(data).length === 1 && data.position !== undefined)
 		) {
-			await this.record({ taskId: id, userId, action: 'updated' })
+			this.record({ taskId: id, userId, action: 'updated' })
 		}
 		return updated
 	}
@@ -109,7 +109,7 @@ export class TaskService {
 		if (!deleted) {
 			throw new NotFoundError('Tarefa não encontrada', 'TASK_NOT_FOUND')
 		}
-		await this.record({ taskId: id, userId, action: 'deleted' })
+		this.record({ taskId: id, userId, action: 'deleted' })
 	}
 
 	async reorder(userId: number, ids: unknown): Promise<TaskEntity[]> {
@@ -150,19 +150,17 @@ export class TaskService {
 		}
 	}
 
-	private async record(input: {
+	private record(input: {
 		taskId: number
 		userId: number
 		action: ActivityAction
-	}): Promise<void> {
+	}): void {
 		if (this.activity === undefined) {
 			return
 		}
-		try {
-			await this.activity.record(input)
-		} catch (err) {
+		void this.activity.record(input).catch((err) => {
 			console.warn('[task-service] histórico de atividades degradado:', err)
-		}
+		})
 	}
 
 	private normalizeTitle(value: unknown): string {
