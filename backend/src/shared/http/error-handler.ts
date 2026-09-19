@@ -66,6 +66,20 @@ export function registerErrorHandler(app: FastifyInstance): void {
 				return
 			}
 
+			if (
+				typeof maybeFastify.statusCode === 'number' &&
+				maybeFastify.statusCode >= 400 &&
+				maybeFastify.statusCode < 500
+			) {
+				app.log.warn(rawError)
+				const body: ErrorBody = {
+					code: 'BAD_REQUEST',
+					message: 'Requisição inválida',
+				}
+				void reply.status(400).send(body)
+				return
+			}
+
 			const statusCode =
 				typeof maybeFastify.statusCode === 'number' &&
 				maybeFastify.statusCode >= 400

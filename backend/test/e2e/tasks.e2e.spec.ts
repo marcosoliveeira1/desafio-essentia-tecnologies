@@ -360,6 +360,20 @@ describe('tasks validation and error edge cases (e2e)', () => {
 		}
 	})
 
+	it('POST com JSON malformado → 400 BAD_REQUEST (não INTERNAL_ERROR)', async () => {
+		const res = await app.inject({
+			method: 'POST',
+			url: '/api/tasks',
+			headers: { 'content-type': 'application/json' },
+			payload: '{inválido',
+		})
+		expect(res.statusCode).toBe(400)
+		expect(res.json()).toEqual({
+			code: 'BAD_REQUEST',
+			message: 'Requisição inválida',
+		})
+	})
+
 	it('erro inesperado → 500 padronizado INTERNAL_ERROR (simulado)', async () => {
 		const headers = await authHeaders(app)
 		const boomService = {
