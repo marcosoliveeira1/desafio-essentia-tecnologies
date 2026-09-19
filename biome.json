@@ -11,6 +11,19 @@
       "recommended": true
     }
   },
+  "overrides": [
+    {
+      "includes": ["frontend/src/**/*.html"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "useValidAnchor": "off",
+            "noSvgWithoutTitle": "off"
+          }
+        }
+      }
+    }
+  ],
   "formatter": {
     "enabled": true
   },

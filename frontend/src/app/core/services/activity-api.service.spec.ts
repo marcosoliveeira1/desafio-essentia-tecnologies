@@ -22,7 +22,11 @@ describe('ActivityApiService', () => {
 
 	beforeEach(() => {
 		TestBed.configureTestingModule({
-			providers: [provideHttpClient(), provideHttpClientTesting(), ActivityApiService],
+			providers: [
+				provideHttpClient(),
+				provideHttpClientTesting(),
+				ActivityApiService,
+			],
 		})
 		service = TestBed.inject(ActivityApiService)
 		httpMock = TestBed.inject(HttpTestingController)

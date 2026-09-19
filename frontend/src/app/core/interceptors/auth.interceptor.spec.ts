@@ -1,15 +1,17 @@
-import { provideHttpClient, withInterceptors } from '@angular/common/http'
+import {
+	HttpClient,
+	provideHttpClient,
+	withInterceptors,
+} from '@angular/common/http'
 import {
 	HttpTestingController,
 	provideHttpClientTesting,
 } from '@angular/common/http/testing'
-import { HttpClient } from '@angular/common/http'
 import { TestBed } from '@angular/core/testing'
-import { Router } from '@angular/router'
-import { provideRouter } from '@angular/router'
+import { provideRouter, Router } from '@angular/router'
 import { vi } from 'vitest'
-import { authInterceptor } from './auth.interceptor'
 import { TokenService } from '../services/token.service'
+import { authInterceptor } from './auth.interceptor'
 
 describe('authInterceptor', () => {
 	let http: HttpClient

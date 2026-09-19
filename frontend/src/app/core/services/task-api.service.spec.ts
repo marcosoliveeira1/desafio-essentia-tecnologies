@@ -23,7 +23,11 @@ describe('TaskApiService', () => {
 
 	beforeEach(() => {
 		TestBed.configureTestingModule({
-			providers: [provideHttpClient(), provideHttpClientTesting(), TaskApiService],
+			providers: [
+				provideHttpClient(),
+				provideHttpClientTesting(),
+				TaskApiService,
+			],
 		})
 		service = TestBed.inject(TaskApiService)
 		httpMock = TestBed.inject(HttpTestingController)

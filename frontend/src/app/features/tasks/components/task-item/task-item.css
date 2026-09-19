@@ -10,7 +10,7 @@
 	box-shadow: 0 3px 0 0 #bfa95f;
 }
 
-article[draggable='true'] {
+article[draggable="true"] {
 	cursor: grabbing;
 }
 

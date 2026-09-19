@@ -1,9 +1,5 @@
-import { computed, inject, Injectable, signal } from '@angular/core'
-import type {
-	CreateTaskDto,
-	Task,
-	UpdateTaskDto,
-} from '../models/task.model'
+import { computed, Injectable, inject, signal } from '@angular/core'
+import type { CreateTaskDto, Task, UpdateTaskDto } from '../models/task.model'
 import { TaskApiService } from './task-api.service'
 
 export type TaskFilter = 'all' | 'pending' | 'done'
@@ -12,7 +8,8 @@ export type TaskSort = 'manual' | 'recent' | 'old'
 const MSG_LOAD = 'Não foi possível carregar as tarefas. Tente novamente.'
 const MSG_ADD = 'Não foi possível criar a tarefa. Tente novamente.'
 const MSG_UPDATE = 'Não foi possível atualizar a tarefa. Tente novamente.'
-const MSG_TOGGLE = 'Não foi possível alterar o status da tarefa. Tente novamente.'
+const MSG_TOGGLE =
+	'Não foi possível alterar o status da tarefa. Tente novamente.'
 const MSG_REMOVE = 'Não foi possível excluir a tarefa. Tente novamente.'
 const MSG_REORDER = 'Não foi possível reordenar as tarefas. Tente novamente.'
 
@@ -143,9 +140,7 @@ export class TaskStoreService {
 				this.loading.set(false)
 			},
 			next: () => {
-				this.tasks.update((current) =>
-					current.filter((task) => task.id !== id),
-				)
+				this.tasks.update((current) => current.filter((task) => task.id !== id))
 				this.loading.set(false)
 			},
 		})
@@ -218,7 +213,6 @@ export class TaskStoreService {
 		this.error.set(null)
 	}
 
-	// T20: limpa a lista no logout para o próximo login não ver dados alheios.
 	clear(): void {
 		this.tasks.set([])
 		this.error.set(null)

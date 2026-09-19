@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http'
-import { inject, Injectable } from '@angular/core'
+import { Injectable, inject } from '@angular/core'
 import type { Observable } from 'rxjs'
 import type { ActivityEntry } from '../models/activity.model'
 

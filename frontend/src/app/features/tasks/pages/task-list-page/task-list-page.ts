@@ -58,8 +58,8 @@ export class TaskListPage implements OnInit {
 	)
 	protected readonly historyTitle = computed(
 		() =>
-			this.store.tasks().find((t) => t.id === this.historyTaskId())
-				?.title ?? null,
+			this.store.tasks().find((t) => t.id === this.historyTaskId())?.title ??
+			null,
 	)
 	protected readonly dragOver = signal<'todo' | 'done' | null>(null)
 	protected readonly dropHint = signal<{

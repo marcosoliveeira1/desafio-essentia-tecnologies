@@ -2,21 +2,21 @@ import {
 	ChangeDetectionStrategy,
 	Component,
 	computed,
+	type ElementRef,
 	effect,
-	ElementRef,
 	inject,
 	input,
 	output,
 	signal,
 	viewChild,
 } from '@angular/core'
+import type { AbstractControl, ValidationErrors } from '@angular/forms'
 import {
 	FormControl,
 	FormGroup,
 	ReactiveFormsModule,
 	Validators,
 } from '@angular/forms'
-import type { AbstractControl, ValidationErrors } from '@angular/forms'
 import type { CreateTaskDto, Task } from '../../../../core/models/task.model'
 import { TaskStoreService } from '../../../../core/services/task-store.service'
 
@@ -37,9 +37,7 @@ function noWhitespaceValidator(
 export class TaskForm {
 	private readonly store = inject(TaskStoreService)
 
-	// T14: `task` define modo edição; null = criação.
 	readonly task = input<Task | null>(null)
-	// Preset de coluna (A fazer / Concluídas). T13 NÃO envia `completed` no DTO.
 	readonly completedPreset = input(false)
 
 	readonly cancelled = output<void>()
@@ -63,8 +61,7 @@ export class TaskForm {
 		}),
 	})
 
-	protected readonly dialog =
-		viewChild<ElementRef<HTMLDialogElement>>('dialog')
+	protected readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('dialog')
 
 	constructor() {
 		effect(() => {

@@ -3,8 +3,8 @@ import {
 	ChangeDetectionStrategy,
 	Component,
 	computed,
+	type ElementRef,
 	effect,
-	ElementRef,
 	inject,
 	input,
 	output,
@@ -25,7 +25,6 @@ const ACTION_LABEL: Record<ActivityAction, string> = {
 	updated: 'atualizada',
 }
 
-// Espelha o actionCls do preview (.specs/docs/ui-preview/index.html).
 const ACTION_CLS: Record<ActivityAction, string> = {
 	completed: 'bg-green-50 text-green-600',
 	created: 'bg-warm text-navy',
@@ -47,8 +46,7 @@ export class TaskHistory {
 	readonly open = input(false)
 	readonly closed = output<void>()
 
-	protected readonly dialog =
-		viewChild<ElementRef<HTMLDialogElement>>('dialog')
+	protected readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('dialog')
 
 	protected readonly entries = signal<ActivityEntry[]>([])
 	protected readonly loading = signal(false)
@@ -100,9 +98,7 @@ export class TaskHistory {
 			id === null ? this.api.getFeed() : this.api.getTaskHistory(id)
 		request.subscribe({
 			error: () => {
-				this.errorLocal.set(
-					'Falha ao carregar atividades. Tente novamente.',
-				)
+				this.errorLocal.set('Falha ao carregar atividades. Tente novamente.')
 				this.loading.set(false)
 			},
 			next: (entries) => {

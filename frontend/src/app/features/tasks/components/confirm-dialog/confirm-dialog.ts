@@ -1,8 +1,8 @@
 import {
 	ChangeDetectionStrategy,
 	Component,
+	type ElementRef,
 	effect,
-	ElementRef,
 	input,
 	output,
 	viewChild,
@@ -20,8 +20,7 @@ export class ConfirmDialog {
 	readonly confirmed = output<void>()
 	readonly cancelled = output<void>()
 
-	protected readonly dialog =
-		viewChild<ElementRef<HTMLDialogElement>>('dialog')
+	protected readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('dialog')
 
 	constructor() {
 		effect(() => {

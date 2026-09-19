@@ -1,5 +1,15 @@
-import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/core'
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms'
+import {
+	ChangeDetectionStrategy,
+	Component,
+	effect,
+	inject,
+} from '@angular/core'
+import {
+	FormControl,
+	FormGroup,
+	ReactiveFormsModule,
+	Validators,
+} from '@angular/forms'
 import { Router, RouterLink } from '@angular/router'
 import { AuthStoreService } from '../../../../core/services/auth-store.service'
 

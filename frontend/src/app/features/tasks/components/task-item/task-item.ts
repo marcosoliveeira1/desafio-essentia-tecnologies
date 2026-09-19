@@ -28,7 +28,6 @@ export class TaskItem {
 
 	protected readonly dragEnabled = signal(false)
 
-	// Colapso de textos longos: começa colapsado, reseta ao trocar de tarefa.
 	protected readonly expanded = linkedSignal(() => {
 		this.task().id
 		return false

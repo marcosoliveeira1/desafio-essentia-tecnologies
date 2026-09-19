@@ -9,9 +9,7 @@ export const authRoutes: Routes = [
 	},
 	{
 		loadComponent: () =>
-			import('./pages/register-page/register-page').then(
-				(m) => m.RegisterPage,
-			),
+			import('./pages/register-page/register-page').then((m) => m.RegisterPage),
 		path: 'register',
 	},
 ]

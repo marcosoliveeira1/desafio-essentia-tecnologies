@@ -1,5 +1,5 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http'
-import { computed, inject, Injectable, signal } from '@angular/core'
+import { computed, Injectable, inject, signal } from '@angular/core'
 import { switchMap } from 'rxjs'
 import type {
 	AuthResponse,
@@ -22,14 +22,6 @@ interface RegisterResponse {
 	email: string
 }
 
-// ESCOLHA DOCUMENTADA (contrato T17/T18): o backend responde ao login com
-// SÓ `{ token }` — sem objeto de usuário. Em vez de uma segunda chamada
-// (não existe `GET /me` na API), o store sintetiza o `User` no cliente:
-// - `id`: claim `sub` do JWT, decodificado na mão (base64url, sem lib —
-//   JWT é `header.payload.sig` e o payload é JSON; só precisamos do `sub`);
-// - `name`/`email`: no register vêm do próprio DTO; no login o form só tem
-//   email, então `name` é best-effort (parte local do email) até existir
-//   endpoint de perfil. Tudo PT-BR visível; `code` da API segue EN estável.
 function userIdFromToken(token: string): number | null {
 	try {
 		const payload = token.split('.')[1]
@@ -107,9 +99,6 @@ export class AuthStoreService {
 				this.tokens.setToken(token)
 				this.user.set({
 					email: dto.email,
-					// Fallback 0 é inalcançável na prática: o backend (T17)
-					// sempre assina com `sub=userId`. Sem `sub` não há como
-					// montar o User sem um `GET /me` (fora do contrato).
 					id: userIdFromToken(token) ?? 0,
 					name: displayNameFromEmail(dto.email),
 				})
@@ -125,8 +114,6 @@ export class AuthStoreService {
 		this.http
 			.post<RegisterResponse>('/api/auth/register', dto)
 			.pipe(
-				// Auto-login encadeado: register 201 → login com as mesmas
-				// credenciais, então o usuário sai autenticado (1 ação na UI).
 				switchMap(() =>
 					this.http.post<AuthResponse>('/api/auth/login', {
 						email: dto.email,

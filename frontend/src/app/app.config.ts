@@ -1,14 +1,14 @@
 import { registerLocaleData } from '@angular/common'
-import localePt from '@angular/common/locales/pt'
 import { provideHttpClient, withInterceptors } from '@angular/common/http'
+import localePt from '@angular/common/locales/pt'
 import {
 	type ApplicationConfig,
 	LOCALE_ID,
 	provideBrowserGlobalErrorListeners,
 } from '@angular/core'
 import { provideRouter } from '@angular/router'
-import { authInterceptor } from './core/interceptors/auth.interceptor'
 import { routes } from './app.routes'
+import { authInterceptor } from './core/interceptors/auth.interceptor'
 
 registerLocaleData(localePt)
 
