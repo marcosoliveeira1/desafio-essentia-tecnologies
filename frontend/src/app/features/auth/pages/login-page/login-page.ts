@@ -3,6 +3,7 @@ import {
 	Component,
 	effect,
 	inject,
+	signal,
 } from '@angular/core'
 import {
 	FormControl,
@@ -27,6 +28,7 @@ const DEMO_PASSWORD = 'demo1234'
 export class LoginPage {
 	protected readonly store = inject(AuthStoreService)
 	private readonly router = inject(Router)
+	protected readonly showPassword = signal(false)
 
 	readonly form = new FormGroup({
 		email: new FormControl('', {
@@ -50,6 +52,10 @@ export class LoginPage {
 	protected useDemo(): void {
 		this.form.setValue({ email: DEMO_EMAIL, password: DEMO_PASSWORD })
 		this.form.markAsUntouched()
+	}
+
+	protected togglePasswordVisibility(): void {
+		this.showPassword.update((visible) => !visible)
 	}
 
 	protected onSubmit(): void {

@@ -3,6 +3,7 @@ import {
 	Component,
 	effect,
 	inject,
+	signal,
 } from '@angular/core'
 import {
 	FormControl,
@@ -25,6 +26,7 @@ import { passwordLengthValidator } from '../../../../core/validators/password.va
 export class RegisterPage {
 	protected readonly store = inject(AuthStoreService)
 	private readonly router = inject(Router)
+	protected readonly showPassword = signal(false)
 
 	readonly form = new FormGroup({
 		email: new FormControl('', {
@@ -47,6 +49,10 @@ export class RegisterPage {
 				void this.router.navigate(['/tasks'])
 			}
 		})
+	}
+
+	protected togglePasswordVisibility(): void {
+		this.showPassword.update((visible) => !visible)
 	}
 
 	protected onSubmit(): void {
